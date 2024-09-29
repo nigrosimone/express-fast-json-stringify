@@ -7,7 +7,10 @@
   "module": "build/module/index.js",
   "repository": "https://github.com/nigrosimone/express-fast-json-stringify",
   "license": "MIT",
-  "keywords": [],
+  "keywords": [
+    "express",
+    "fast-json-stringify"
+  ],
   "scripts": {
     "build": "run-p build:*",
     "build:main": "tsc -p tsconfig.json",
