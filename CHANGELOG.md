@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.0](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.1.4...v1.2.0) (2024-09-29)
+
+
+### Features
+
+* add options ([9466dc3](https://github.com/nigrosimone/express-fast-json-stringify/commit/9466dc30c20693a7ceabf2240d5d9701c76280c0))
+
 ### [1.1.4](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.1.2...v1.1.4) (2024-09-29)
 
 ### [1.1.2](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.1.0...v1.1.2) (2024-09-29)
