@@ -2,6 +2,8 @@
 
 One of the reasons why [Fastify](https://www.npmjs.com/package/fastify) is faster than Express is its use of [fast-json-stringify](https://www.npmjs.com/package/fast-json-stringify). `fast-json-stringify` is a library developed by the Fastify team that boosts JSON conversion speed by analyzing JSON schema definitions.
 
+See the stackblitz [demo](https://stackblitz.com/edit/express-fast-json-stringify).
+
 By using the `fast-json-stringify` library, Fastify can serialize JSON much faster than Express, contributing to its overall performance advantage.
 
 With `express-fast-json-stringify`, you can leverage `fast-json-stringify` in your Express application as follows:
