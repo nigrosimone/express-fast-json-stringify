@@ -1,12 +1,13 @@
 import type { NextFunction, Request, Response } from 'express';
-import fastJson, { Options, Schema } from 'fast-json-stringify';
+import fastJson, { type Options, type Schema } from 'fast-json-stringify';
 
 export type { Schema, Options } from 'fast-json-stringify';
 
 /**
  * Set the schema
  * @param {Schema} schema The schema used to stringify values
- * @param {Options} options The options to use (optional)
+ * @param {Options} options The options to use (optional) 
+ * @see https://www.npmjs.com/package/fast-json-stringify
  *
  * Examples:
  * ```ts

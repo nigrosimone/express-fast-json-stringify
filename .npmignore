@@ -15,3 +15,4 @@ publish.bat
 tsconfig.json
 tsconfig.module.json
 prj.code-workspace
+CHANGELOG.md
