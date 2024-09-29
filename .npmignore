@@ -1,0 +1,16 @@
+.circleci
+.git
+.github
+.nyc_output
+.vscode
+node_modules
+src
+.cspell.json
+.editorconfig
+.eslintrc.json
+.gitignore
+.npmignore
+.prettierignore
+publish.bat
+tsconfig.json
+tsconfig.module.json
