@@ -16,3 +16,7 @@ tsconfig.json
 tsconfig.module.json
 prj.code-workspace
 CHANGELOG.md
+build/main/index.spec.d.ts
+build/main/index.spec.js
+build/module/index.spec.d.ts
+build/module/index.spec.js
