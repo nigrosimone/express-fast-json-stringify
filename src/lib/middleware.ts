@@ -1,11 +1,12 @@
 import type { NextFunction, Request, Response } from 'express';
-import fastJson, { Schema } from 'fast-json-stringify';
+import fastJson, { Options, Schema } from 'fast-json-stringify';
 
-export type { Schema } from 'fast-json-stringify';
+export type { Schema, Options } from 'fast-json-stringify';
 
 /**
  * Set the schema
- * @param {Schema} schema
+ * @param {Schema} schema The schema used to stringify values
+ * @param {Options} options The options to use (optional)
  *
  * Examples:
  * ```ts
@@ -44,11 +45,11 @@ export type { Schema } from 'fast-json-stringify';
  * });
  * ```
  */
-export const fastJsonSchema = (schema: Schema) => {
+export const fastJsonSchema = (schema: Schema, options?: Options) => {
   if (!schema) {
     throw new TypeError(`express-fast-json-stringify: invalid schema`);
   }
-  const fjs = fastJson(schema);
+  const fjs = fastJson(schema, options);
   return (_req: Request, res: Response, next: NextFunction) => {
     /**
      * Send JSON response.
