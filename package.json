@@ -1,6 +1,6 @@
 {
   "name": "express-fast-json-stringify",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "With express-fast-json-stringify, you can leverage fast-json-stringify in your Express application",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
