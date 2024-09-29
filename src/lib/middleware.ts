@@ -6,7 +6,7 @@ export type { Schema, Options } from 'fast-json-stringify';
 /**
  * Set the schema
  * @param {Schema} schema The schema used to stringify values
- * @param {Options} options The options to use (optional) 
+ * @param {Options} options The options to use (optional)
  * @see https://www.npmjs.com/package/fast-json-stringify
  *
  * Examples:
