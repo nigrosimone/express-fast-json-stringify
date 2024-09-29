@@ -70,3 +70,20 @@ export const fastJsonSchema = (schema: Schema, options?: Options) => {
     next();
   };
 };
+
+declare global {
+  namespace Express {
+    export interface Response {
+      /**
+       * Send JSON response.
+       *
+       * Examples:
+       * ```ts
+       * res.fastJson({ user: 'tj' });
+       * res.status(200).fastJson({ user: 'tj' });
+       * ```
+       */
+      fastJson: (data: any) => Response;
+    }
+  }
+}

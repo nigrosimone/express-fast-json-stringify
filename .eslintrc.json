@@ -31,6 +31,7 @@
     "WebAssembly": true
   },
   "rules": {
+    "@typescript-eslint/no-namespace": "off",
     "@typescript-eslint/no-unused-vars": "off",
     "functional/prefer-immutable-types": "off",
     "functional/no-return-void": "off",
