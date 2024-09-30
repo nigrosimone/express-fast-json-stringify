@@ -61,11 +61,11 @@ export const fastJsonSchema = (schema: Schema, options?: Options) => {
      * res.status(200).fastJson({ user: 'tj' });
      * ```
      */
-    res.fastJson = (data: any): Response => {
+    res.fastJson = (body: any): Response => {
       if (!res.getHeader('Content-Type')) {
         res.setHeader('Content-Type', 'application/json');
       }
-      return res.send(fjs(data));
+      return res.send(fjs(body));
     };
     next();
   };
@@ -83,7 +83,7 @@ declare global {
        * res.status(200).fastJson({ user: 'tj' });
        * ```
        */
-      fastJson: (data: any) => Response;
+      fastJson: (body: any) => Response;
     }
   }
 }
