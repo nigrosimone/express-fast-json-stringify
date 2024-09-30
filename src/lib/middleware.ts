@@ -4,7 +4,7 @@ import fastJson, { type Options, type Schema } from 'fast-json-stringify';
 export type { Schema, Options } from 'fast-json-stringify';
 
 /**
- * Set the schema
+ * Build a stringify function using a schema of the documents that should be stringified
  * @param {Schema} schema The schema used to stringify values
  * @param {Options} options The options to use (optional)
  * @see https://www.npmjs.com/package/fast-json-stringify
