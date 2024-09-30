@@ -1,4 +1,4 @@
-JSON serialization is a critical task in web development, particularly for applications built with Node.js and Express.js. While the native JSON serialization in Node.js (`JSON.stringify()`) is straightforward and convenient, it can become a performance bottleneck, especially under heavy load. This article introduces [express-fast-json-stringify](https://www.npmjs.com/package/express-fast-json-stringify), a custom middleware package that leverages [fast-json-stringify](https://www.npmjs.com/package/fast-json-stringify) to significantly boost JSON serialization performance in Express applications.
+JSON serialization is a critical task in web development, particularly for applications built with Node.js and Express.js. While the native JSON serialization in Node.js (`JSON.stringify()`) is straightforward and convenient, it can become a performance bottleneck, especially under heavy load. This documentation introduces [express-fast-json-stringify](https://www.npmjs.com/package/express-fast-json-stringify), a custom middleware package that leverages [fast-json-stringify](https://www.npmjs.com/package/fast-json-stringify) to significantly boost JSON serialization performance in Express applications.
 
 ## What is fast-json-stringify?
 
@@ -110,4 +110,4 @@ Using `express-fast-json-stringify` offers several performance benefits:
 
 Integrating `express-fast-json-stringify` into your Express.js application can provide substantial performance improvements, especially in scenarios where JSON serialization is a bottleneck. By leveraging the power of `fast-json-stringify`, you can achieve faster response times and handle higher loads, making your application more efficient and scalable.
 
-To start using `express-fast-json-stringify`, follow the steps outlined in this article, and enjoy the benefits of faster JSON serialization in your Express applications. For a live demo, you can check out the [StackBlitz demo](https://stackblitz.com/edit/express-fast-json-stringify).
+To start using `express-fast-json-stringify`, follow the steps outlined in this documentation, and enjoy the benefits of faster JSON serialization in your Express applications. For a live demo, you can check out the [StackBlitz demo](https://stackblitz.com/edit/express-fast-json-stringify).
