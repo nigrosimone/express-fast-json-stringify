@@ -111,3 +111,7 @@ Using `express-fast-json-stringify` offers several performance benefits:
 Integrating `express-fast-json-stringify` into your Express.js application can provide substantial performance improvements, especially in scenarios where JSON serialization is a bottleneck. By leveraging the power of `fast-json-stringify`, you can achieve faster response times and handle higher loads, making your application more efficient and scalable.
 
 To start using `express-fast-json-stringify`, follow the steps outlined in this documentation, and enjoy the benefits of faster JSON serialization in your Express applications. For a live demo, you can check out the [StackBlitz demo](https://stackblitz.com/edit/express-fast-json-stringify).
+
+## Support
+
+This is an open-source project. Star this [repository](https://github.com/nigrosimone/express-fast-json-stringify), if you like it, or even [donate](https://www.paypal.com/paypalme/snwp). Thank you so much!
