@@ -9,7 +9,13 @@
   "license": "MIT",
   "keywords": [
     "express",
-    "fast-json-stringify"
+    "fast-json-stringify",
+    "json",
+    "stringify",
+    "schema",
+    "jsonschema",
+    "validator",
+    "json-schema"
   ],
   "scripts": {
     "build": "run-p build:*",
