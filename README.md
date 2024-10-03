@@ -42,7 +42,7 @@ const schema: Schema = {
 Use the `fastJsonSchema` middleware in your Express routes, passing the schema object as an argument. This will set up the optimized JSON serialization for that route.
 
 ```ts
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import { fastJsonSchema, Schema } from 'express-fast-json-stringify';
 
 const app = express();
@@ -57,11 +57,7 @@ const exampleSchema: Schema = {
   },
 };
 
-app.get(
-  '/',
-  fastJsonSchema(exampleSchema),
-  (req: Request, res: Response, next: NextFunction) => {},
-);
+app.get('/', fastJsonSchema(exampleSchema), (req, res, next) => {});
 ```
 
 ## Sending JSON Responses
@@ -69,7 +65,10 @@ app.get(
 Instead of using the default `res.json()` method, use the `res.fastJson()` method provided by the middleware to send JSON responses. This leverages the speed benefits of fast-json-stringify.
 
 ```ts
+import express from 'express';
 import { fastJsonSchema, Schema } from 'express-fast-json-stringify';
+
+const app = express();
 
 const schema: Schema = {
   title: 'Example Schema',

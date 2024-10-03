@@ -12,7 +12,7 @@ export type { Schema, Options } from 'fast-json-stringify';
  * Examples:
  * ```ts
  * import express from 'express';
- * import { fastJsonSchemas, Schema } from 'express-fast-json-stringify';
+ * import { fastJsonSchema, Schema } from 'express-fast-json-stringify';
  *
  * const app = express();
  *
