@@ -65,7 +65,7 @@ export const fastJsonSchema = (schema: Schema, options?: Options) => {
       if (!res.getHeader('Content-Type')) {
         res.setHeader('Content-Type', 'application/json');
       }
-      return res.send(fjs(body));
+      return res.end(fjs(body));
     };
     next();
   };
