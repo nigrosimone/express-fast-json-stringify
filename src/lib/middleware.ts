@@ -46,7 +46,7 @@ export type { Schema, Options } from 'fast-json-stringify';
  * });
  * ```
  */
-export const fastJsonSchema = (schema: Schema, options?: Options) => {
+export const fastJsonSchema = (schema: Schema, options?: Omit<Options, 'mode'>) => {
   if (!schema) {
     throw new TypeError(`express-fast-json-stringify: invalid schema`);
   }
