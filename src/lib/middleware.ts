@@ -57,8 +57,8 @@ export const fastJsonSchema = (schema: Schema, options?: Omit<Options, 'mode'>) 
      *
      * Examples:
      * ```ts
-     * res.fastJson({ user: 'tj' });
-     * res.status(200).fastJson({ user: 'tj' });
+     * res.fastJson({ user: 'Simone Nigro' });
+     * res.status(200).fastJson({ user: 'Simone Nigro' });
      * ```
      */
     res.fastJson = (body: any): Response => {
@@ -79,8 +79,8 @@ declare global {
        *
        * Examples:
        * ```ts
-       * res.fastJson({ user: 'tj' });
-       * res.status(200).fastJson({ user: 'tj' });
+       * res.fastJson({ user: 'Simone Nigro' });
+       * res.status(200).fastJson({ user: 'Simone Nigro' });
        * ```
        */
       fastJson: (body: any) => Response;
