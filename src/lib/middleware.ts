@@ -62,9 +62,7 @@ export const fastJsonSchema = (schema: Schema, options?: Omit<Options, 'mode'>) 
      * ```
      */
     res.fastJson = (body: any): Response => {
-      if (!res.getHeader('Content-Type')) {
-        res.setHeader('Content-Type', 'application/json');
-      }
+      res.setHeader('Content-Type', 'application/json');
       return res.end(fjs(body));
     };
     next();
