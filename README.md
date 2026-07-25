@@ -2,7 +2,7 @@ JSON serialization is a critical task in web development, particularly for appli
 
 ## What is fast-json-stringify?
 
-`fast-json-stringify` is a JSON serialization library developed by the Fastify team. It enhances JSON conversion speed by analyzing JSON schema definitions and compiling them into highly optimized serialization functions. This makes it much faster than the native `JSON.stringify()`, particularly beneficial for high-performance applications.
+`fast-json-stringify` is a JSON serialization library developed by the Fastify team. It analyzes JSON schema definitions and compiles them into serialization functions specialized for the exact shape of your payload, so it can skip everything the schema does not describe instead of walking the object generically like `JSON.stringify()` has to.
 
 ## Introducing express-fast-json-stringify
 
@@ -15,6 +15,8 @@ First, install the `express-fast-json-stringify` package:
 ```
 npm install express-fast-json-stringify
 ```
+
+It requires Express 4.16 or newer (Express 5 included) and Node.js 20 or newer.
 
 ## Creating a JSON Schema
 
@@ -97,19 +99,47 @@ app.get('/', fastJsonSchema(schema), (req, res, next) => {
 });
 ```
 
+## Response semantics
+
+`res.fastJson()` is a drop-in replacement for `res.json()`: only the
+serialization changes, every HTTP detail stays the same.
+
+| Behavior             | What `res.fastJson()` does                                                                          |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| `Content-Type`       | `application/json; charset=utf-8`, unless the route already set one with `res.type()`.              |
+| `Content-Length`     | Always set, from the byte length of the payload, so the response is never chunked.                  |
+| `ETag`               | Follows the app `etag` setting, exactly like `res.send()`. Set `app.set('etag', false)` to skip it. |
+| Conditional requests | A matching `If-None-Match` answers `304` with no body.                                              |
+| `204` and `304`      | No body and no `Content-Type`/`Content-Length`/`Transfer-Encoding`.                                 |
+| `HEAD`               | Headers only, `Content-Length` included.                                                            |
+
+The payload is serialized before the status code is inspected, so a body that
+does not match the schema still throws on a `204` — just like `res.json()`.
+
 ## Performance Benefits
 
-Using `express-fast-json-stringify` offers several performance benefits:
+Using `express-fast-json-stringify` offers several benefits:
 
-1. **Increased Speed**: `fast-json-stringify` can serialize JSON data much faster than JSON.stringify(), especially for complex JSON objects.
-2. **Reduced CPU Usage**: Faster serialization means less CPU time spent on processing, allowing your server to handle more concurrent requests.
-3. **Consistency and Validation**: By defining JSON schemas, you ensure that the serialized data adheres to a predefined structure, improving data consistency and reducing the likelihood of errors.
+1. **Increased Speed**: a compiled serializer only writes the properties the schema describes, so the more your objects carry that the response does not need, the more time it saves.
+2. **Reduced CPU Usage**: faster serialization means less CPU time spent on processing, allowing your server to handle more concurrent requests.
+3. **Consistency and Validation**: by defining JSON schemas, you ensure that the serialized data adheres to a predefined structure, improving data consistency and reducing the likelihood of errors — and properties missing from the schema never leak into a response.
+
+How much you gain depends on the payload, and on a current V8 it is not a win across the board. Measured on Node.js 26 by `npm run example`:
+
+| Case                                       | `fast-json-stringify` vs `JSON.stringify`   |
+| ------------------------------------------ | ------------------------------------------- |
+| objects carrying fields outside the schema | much faster (≈9x when 17 of 20 are dropped) |
+| a single small object                      | comparable                                  |
+| every field serialized                     | comparable                                  |
+| long strings                               | slower                                      |
+
+Run `npm run example` to get the numbers for your own Node.js version and payload shape before adopting it in a hot path.
 
 ## Conclusion
 
-Integrating `express-fast-json-stringify` into your Express.js application can provide substantial performance improvements, especially in scenarios where JSON serialization is a bottleneck. By leveraging the power of `fast-json-stringify`, you can achieve faster response times and handle higher loads, making your application more efficient and scalable.
+Integrating `express-fast-json-stringify` into your Express.js application can provide substantial performance improvements when JSON serialization is a bottleneck and your schemas let the serializer skip work. It also guarantees that responses carry exactly the properties the schema describes, which is worth having on its own.
 
-To start using `express-fast-json-stringify`, follow the steps outlined in this documentation, and enjoy the benefits of faster JSON serialization in your Express applications. For a live demo, you can check out the [StackBlitz demo](https://stackblitz.com/edit/express-fast-json-stringify).
+To start using `express-fast-json-stringify`, follow the steps outlined in this documentation, and enjoy the benefits of faster JSON serialization in your Express applications. For a runnable demo, see [example/](./example): `npm install && npm run example`.
 
 ## Support
 
