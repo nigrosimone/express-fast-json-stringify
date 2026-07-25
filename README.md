@@ -116,6 +116,83 @@ serialization changes, every HTTP detail stays the same.
 The payload is serialized before the status code is inspected, so a body that
 does not match the schema still throws on a `204` — just like `res.json()`.
 
+## Taking the schema from your OpenAPI document
+
+If you already publish an OpenAPI (or Swagger) document, the response schemas
+are written there — no need to repeat them in the routes. `fastJsonOpenApi`
+takes that document and resolves the schema per route and per status code:
+
+```ts
+import express from 'express';
+import { fastJsonOpenApi } from 'express-fast-json-stringify';
+
+import document from './openapi.json' with { type: 'json' };
+
+const app = express();
+
+// One middleware for the whole app.
+app.use(fastJsonOpenApi(document));
+
+app.get('/users/:id', (req, res, next) => {
+  try {
+    // Serialized with the schema of `get /users/{id}` -> `200`.
+    res.fastJson(user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/users', (req, res, next) => {
+  try {
+    // ...and this one with the schema of `post /users` -> `201`.
+    res.status(201).fastJson(user);
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
+The document is a plain object, so this works with whatever produces yours:
+
+| Tool                        | How to pass it                                                         |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `swagger-jsdoc`             | `fastJsonOpenApi(swaggerJsdoc(options))`                               |
+| `swagger-ui-express`        | the same object you hand to `swaggerUi.setup(document)`                |
+| `express-openapi-validator` | the same document you pass as `apiSpec` (or the parsed YAML/JSON file) |
+| `tsoa`                      | the generated `swagger.json`                                           |
+| hand written                | `import document from './openapi.json' with { type: 'json' }`          |
+
+There is no dependency on any of them: the middleware only reads `paths`,
+`components.schemas` (OpenAPI 3.x) and `definitions` (Swagger 2.0).
+
+### What it resolves
+
+- **The operation** comes from the matched Express route, so `/users/:id`
+  under a router mounted at `/api` looks up `/api/users/{id}`. Parameter
+  modifiers (`:id?`, `:id(\d+)`) are ignored, as OpenAPI has no equivalent.
+  A `HEAD` request falls back to the `get` operation, the way Express does.
+- **The response** is matched most specific first: the exact status code, then
+  the wildcard range (`2XX`), then `default`. `res.status(404).fastJson(...)`
+  therefore serializes with the `404` schema.
+- **`$ref`** is resolved against the document, including recursive references,
+  so `#/components/schemas/User` and `#/definitions/User` both just work.
+- **OpenAPI 3.0 and 3.1** are both supported; `nullable: true` is honoured and
+  annotation keywords (`example`, `discriminator`, `xml`, ...) are ignored.
+
+Routes the document does not describe fall back to `res.json()`, so adding the
+middleware app-wide cannot break an undocumented endpoint. Pass
+`{ strict: true }` to get an error instead of a silent fallback.
+
+```ts
+// Read a different media type, pin an operation, forward fast-json-stringify options
+app.use(fastJsonOpenApi(document, { contentType: 'application/vnd.api+json' }));
+app.get('/v2/people/:id', fastJsonOpenApi(document, { path: '/users/{id}', method: 'get' }), handler);
+```
+
+Because the schema decides what gets written, a property that is not in the
+document can never reach a client — `npm run example:openapi` shows a
+`passwordHash` being dropped from an otherwise ordinary response object.
+
 ## Performance Benefits
 
 Using `express-fast-json-stringify` offers several benefits:

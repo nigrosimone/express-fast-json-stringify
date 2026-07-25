@@ -43,7 +43,8 @@
     "reset-hard": "git clean -dfx && git reset --hard && npm i",
     "prepare-release": "run-s reset-hard test cov:check doc:html release doc:publish",
     "example": "tsx example/index.ts",
-    "release": "release-it"
+    "release": "release-it",
+    "example:openapi": "tsx example/openapi.ts"
   },
   "engines": {
     "node": ">=20"

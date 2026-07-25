@@ -45,6 +45,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run example
+      - run: npm run example:openapi
 
   test:
     name: Test (node ${{ matrix.node-version }})

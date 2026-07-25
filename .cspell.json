@@ -20,6 +20,7 @@
     "Fastify",
     "globby",
     "ipsum",
+    "jsdoc",
     "jsonschema",
     "libauth",
     "lorem",
@@ -27,6 +28,7 @@
     "Nigro",
     "nigrosimone",
     "Nigr\u00f2",
+    "openapi",
     "paypalme",
     "prettierignore",
     "sandboxed",
@@ -34,6 +36,7 @@
     "snwp",
     "stackblitz",
     "transpiled",
+    "tsoa",
     "typedoc",
     "untracked",
     "vitest"
