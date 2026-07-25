@@ -193,6 +193,57 @@ Because the schema decides what gets written, a property that is not in the
 document can never reach a client — `npm run example:openapi` shows a
 `passwordHash` being dropped from an otherwise ordinary response object.
 
+### Adopting it without touching your routes
+
+Everything above needs you to call `res.fastJson()`. In an existing codebase
+that means editing every `res.json()` call site, which is a lot of churn for a
+serialization change. `overrideJson` removes that step:
+
+```ts
+app.use(fastJsonOpenApi(document, { overrideJson: true }));
+
+// Unchanged route. It is now serialized from the `get /users/{id}` -> `200`
+// schema, with no edit at the call site.
+app.get('/users/:id', (req, res) => res.json(user));
+```
+
+Only `res.json` is replaced. Express implements `res.send(object)` by calling
+`res.json(object)`, so both entry points are covered by the one hook, while
+`res.send` of a string or a Buffer is left alone.
+
+**The override cannot break a route.** It steps aside, and the stock
+`res.json()` runs, whenever:
+
+- the document describes no schema for that route and status code;
+- the app sets `json replacer`, `json spaces` or `json escape` — those change
+  the bytes `res.json()` writes and a compiled serializer cannot reproduce them;
+- the serializer rejects the body, for instance because a required property is
+  missing. Pass `onError` to be told when that happens:
+
+```ts
+app.use(
+  fastJsonOpenApi(document, {
+    overrideJson: true,
+    onError: (error, req) => logger.warn({ error, url: req.originalUrl }, 'schema mismatch'),
+  }),
+);
+```
+
+`strict` does not apply here: it governs explicit `res.fastJson()` calls, while
+an overridden `res.json()` always falls back rather than throw.
+
+`fastJsonSchema` accepts `overrideJson` too, with one difference: a single
+schema describes the _successful_ payload, so only `2xx` responses take the fast
+path. An error body would otherwise be rewritten into the shape of the success
+schema.
+
+```ts
+app.get('/users/:id', fastJsonSchema(userSchema, { overrideJson: true }), (req, res) => {
+  res.json(user); // serialized through the schema
+  res.status(500).json({ error: 'boom' }); // untouched, stock res.json()
+});
+```
+
 ## Performance Benefits
 
 Using `express-fast-json-stringify` offers several benefits:

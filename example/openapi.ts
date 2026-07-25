@@ -26,6 +26,13 @@ const document: OpenApiDocument = {
         },
       },
     },
+    '/mismatch': {
+      get: {
+        responses: {
+          200: { content: { 'application/json': { schema: { type: 'object', properties: { n: { type: 'integer' } }, required: ['n'], additionalProperties: false } } } },
+        },
+      },
+    },
     '/users': {
       post: {
         responses: {
@@ -59,7 +66,16 @@ const app = express();
 
 // One middleware for the whole app: every route documented above gets a
 // compiled serializer, chosen per route and per status code.
-app.use(fastJsonOpenApi(document));
+//
+// `overrideJson` also routes plain `res.json()` through it, so the routes below
+// never mention this library — which is what adopting it in an existing
+// codebase looks like.
+app.use(
+  fastJsonOpenApi(document, {
+    overrideJson: true,
+    onError: (error) => console.log(`    [onError] ${(error as Error).message}`),
+  }),
+);
 
 const record = {
   id: 7,
@@ -69,30 +85,28 @@ const record = {
   passwordHash: 'never serialized',
 };
 
-app.get('/users/:id', (req, res, next) => {
-  try {
-    if (req.params.id !== '7') {
-      res.status(404).fastJson({ message: `no user ${req.params.id}`, passwordHash: 'never serialized' });
-      return;
-    }
-    res.fastJson(record);
-  } catch (error) {
-    next(error);
+// Ordinary routes: no res.fastJson, no try/catch, nothing to rewrite.
+app.get('/users/:id', (req, res) => {
+  if (req.params.id !== '7') {
+    res.status(404).json({ message: `no user ${req.params.id}`, passwordHash: 'never serialized' });
+    return;
   }
+  res.json(record);
 });
 
-app.post('/users', (_req, res, next) => {
-  try {
-    res.status(201).fastJson(record);
-  } catch (error) {
-    next(error);
-  }
+app.post('/users', (_req, res) => {
+  res.status(201).json(record);
 });
 
-// Not described by the document: `res.fastJson` falls back to `res.json`, so the
-// route keeps working (pass `{ strict: true }` to make this an error instead).
+// Not described by the document, so the stock res.json runs and nothing breaks.
 app.get('/health', (_req, res) => {
-  res.fastJson({ status: 'ok', uptime: 1 });
+  res.json({ status: 'ok', uptime: 1 });
+});
+
+// Described, but this body does not fit the schema: onError fires and the stock
+// res.json answers anyway.
+app.get('/mismatch', (_req, res) => {
+  res.json({ nothing: 'like the schema' });
 });
 
 type Reply = { status: number; headers: http.IncomingHttpHeaders; body: string };
@@ -127,6 +141,7 @@ const server = app.listen(0, async () => {
     show('GET /users/9        (404, Error schema)', await send(port, '/users/9'));
     show('POST /users         (201, User schema)', await send(port, '/users', 'POST'));
     show('GET /health         (undocumented, falls back to res.json)', await send(port, '/health'));
+    show('GET /mismatch       (documented, body does not fit -> falls back)', await send(port, '/mismatch'));
 
     console.log('\n    Note how passwordHash never appears in a documented');
     console.log('    response: the schema decides what is serialized, so the');

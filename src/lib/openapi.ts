@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import fastJson, { type Options, type Schema } from 'fast-json-stringify';
 
+import { type OverrideErrorHandler, overrideResJson } from './override';
 import { sendJson } from './send';
 
 /**
@@ -28,9 +29,26 @@ export type OpenApiOptions = Omit<Options, 'mode'> & {
   readonly method?: string;
   /**
    * Throw when the document describes no schema for a response, instead of
-   * quietly falling back to `res.json()`.
+   * quietly falling back to `res.json()`. Only applies to explicit
+   * `res.fastJson()` calls — an overridden `res.json()` always falls back.
    */
   readonly strict?: boolean;
+  /**
+   * Also route `res.json()` — and therefore `res.send(object)`, which Express
+   * implements on top of it — through the compiled serializer whenever the
+   * document describes the response.
+   *
+   * Off by default. Turning it on lets an existing codebase benefit without
+   * rewriting a single call site: responses the document covers are serialized
+   * from the schema, everything else keeps the stock behavior.
+   */
+  readonly overrideJson?: boolean;
+  /**
+   * Called when an overridden `res.json()` could not use the fast path because
+   * the serializer threw. The response falls back to the stock `res.json()`
+   * either way; this is only so the mismatch is visible.
+   */
+  readonly onError?: OverrideErrorHandler;
 };
 
 /**
@@ -143,7 +161,7 @@ export const fastJsonOpenApi = (document: OpenApiDocument, options: OpenApiOptio
     throw new TypeError(`express-fast-json-stringify: invalid OpenAPI document`);
   }
 
-  const { contentType = 'application/json', path: pinnedPath, method: pinnedMethod, strict = false, ...fastJsonOptions } = options;
+  const { contentType = 'application/json', path: pinnedPath, method: pinnedMethod, strict = false, overrideJson = false, onError, ...fastJsonOptions } = options;
 
   // One compiled serializer per operation and status code. Misses are cached as
   // `null` so an undocumented route costs a single lookup.
@@ -188,6 +206,11 @@ export const fastJsonOpenApi = (document: OpenApiDocument, options: OpenApiOptio
       }
       return sendJson(req, res, serializer(body));
     };
+
+    if (overrideJson) {
+      overrideResJson(req, res, (status) => serializerFor(req, status), onError);
+    }
+
     next();
   };
 };
