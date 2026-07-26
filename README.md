@@ -1,5 +1,7 @@
 JSON serialization is a critical task in web development, particularly for applications built with Node.js and Express.js. While the native JSON serialization in Node.js (`JSON.stringify()`) is straightforward and convenient, it can become a performance bottleneck, especially under heavy load. This documentation introduces [express-fast-json-stringify](https://www.npmjs.com/package/express-fast-json-stringify), a custom middleware package that leverages [fast-json-stringify](https://www.npmjs.com/package/fast-json-stringify) to significantly boost JSON serialization performance in Express applications.
 
+Run it now on [StackBlitz](https://stackblitz.com/github/nigrosimone/express-fast-json-stringify) — it boots the Express server, serves the same payload through `res.json()` and `res.fastJson()`, and prints both responses side by side. The [sources](./example) are in this repository.
+
 ## What is fast-json-stringify?
 
 `fast-json-stringify` is a JSON serialization library developed by the Fastify team. It analyzes JSON schema definitions and compiles them into serialization functions specialized for the exact shape of your payload, so it can skip everything the schema does not describe instead of walking the object generically like `JSON.stringify()` has to.
@@ -267,7 +269,7 @@ Run `npm run example` to get the numbers for your own Node.js version and payloa
 
 Integrating `express-fast-json-stringify` into your Express.js application can provide substantial performance improvements when JSON serialization is a bottleneck and your schemas let the serializer skip work. It also guarantees that responses carry exactly the properties the schema describes, which is worth having on its own.
 
-To start using `express-fast-json-stringify`, follow the steps outlined in this documentation, and enjoy the benefits of faster JSON serialization in your Express applications. For a runnable demo, see [example/](./example): `npm install && npm run example`.
+To start using `express-fast-json-stringify`, follow the steps outlined in this documentation, and enjoy the benefits of faster JSON serialization in your Express applications. For a runnable demo, open it on [StackBlitz](https://stackblitz.com/github/nigrosimone/express-fast-json-stringify) or run it locally from [example/](./example): `npm install && npm run example`.
 
 ## Support
 

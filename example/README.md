@@ -10,5 +10,9 @@ npm install
 npm run example
 ```
 
+Or run it without cloning anything, on
+[StackBlitz](https://stackblitz.com/github/nigrosimone/express-fast-json-stringify):
+`.stackblitzrc` in the repository root points it at this example.
+
 The example imports the middleware straight from `../src`, so any change you
 make to the source is picked up on the next run — no build step needed.
