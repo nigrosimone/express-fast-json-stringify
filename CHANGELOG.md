@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.3.0](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.2.9...v1.3.0) (2026-07-26)
+
+### Features
+
+* derive the schema from an OpenAPI or Swagger document ([5ce6622](https://github.com/nigrosimone/express-fast-json-stringify/commit/5ce6622fd216df1074e844c254bef0c7731205cd))
+* opt in override of res.json, so adoption needs no call site changes ([bcfda45](https://github.com/nigrosimone/express-fast-json-stringify/commit/bcfda4579ac8380f53c525b5cadcbc177e835b9c))
+
+### Bug Fixes
+
+* align res.fastJson with res.json HTTP semantics; add CI and vitest ([f2c8558](https://github.com/nigrosimone/express-fast-json-stringify/commit/f2c85584c105ce24c6c7327382b6b80022aade10))
+
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
 ### [1.2.9](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.2.8...v1.2.9) (2026-01-18)
