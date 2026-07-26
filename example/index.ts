@@ -34,6 +34,14 @@ const payload = {
 
 const app = express();
 
+app.get('/', (_req, res, next) => {
+  try {
+    res.send(`<html><body><h1>Example</h1><p>Try <a href="/fast-json">/fast-json</a> and <a href="/native-json">/native-json</a>.</p></body></html>`);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/fast-json', fastJsonSchema(schema), (_req, res, next) => {
   try {
     // Properties missing from the schema never reach the wire.
