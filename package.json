@@ -44,7 +44,8 @@
     "prepare-release": "run-s reset-hard test cov:check doc:html release doc:publish",
     "example": "tsx example/index.ts",
     "release": "release-it",
-    "example:openapi": "tsx example/openapi.ts"
+    "example:openapi": "tsx example/openapi.ts",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20"
@@ -67,6 +68,8 @@
     "eslint-plugin-import-x": "^4.17.1",
     "express": "^5.2.1",
     "gh-pages": "^6.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
     "npm-run-all2": "^9.0.2",
     "open-cli": "^9.0.0",
     "prettier": "^3.9.6",
@@ -93,5 +96,8 @@
   "prettier": {
     "singleQuote": true,
     "printWidth": 180
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown"
   }
 }
