@@ -12,13 +12,18 @@ export type OverrideErrorHandler = (error: unknown, req: Request) => void;
  * Settings that change the bytes `res.json()` writes. A compiled serializer
  * cannot reproduce any of them, so the fast path has to step aside when one is
  * configured rather than silently change the output.
+ *
+ * Each one is tested on its own, and by truthiness, exactly as `res.json()`
+ * tests it: a falsy `json spaces` (`0` is a normal way to spell "compact
+ * output") changes nothing, so it must neither cost the fast path nor hide the
+ * settings after it, which is what folding the three together with `??` did.
  */
 const hasCustomJsonSettings = (res: Response): boolean => {
   const app = res.app;
   if (!app) {
     return false;
   }
-  return Boolean(app.get('json replacer') ?? app.get('json spaces') ?? app.get('json escape'));
+  return Boolean(app.get('json replacer')) || Boolean(app.get('json spaces')) || Boolean(app.get('json escape'));
 };
 
 /**

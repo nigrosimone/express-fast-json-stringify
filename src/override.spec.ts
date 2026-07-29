@@ -6,6 +6,8 @@ import { fastJsonOpenApi, fastJsonSchema, type OpenApiDocument, type Schema } fr
 
 const record = { id: 7, firstName: 'Simoné', lastName: 'Nigrò', secret: 'never serialized' };
 const filtered = { id: 7, firstName: 'Simoné', lastName: 'Nigrò' };
+/** Payload whose bytes differ depending on the `json escape` app setting. */
+const unsafe = { id: 7, firstName: '<script>alert(1)</script>', lastName: 'Nigrò & Co' };
 
 const userSchema: Schema = {
   type: 'object',
@@ -174,6 +176,56 @@ describe('overrideJson steps aside when it cannot match res.json', () => {
     expect(fast.text).toBe(reference.text);
     // The stock res.json() ran, so nothing was filtered out.
     expect(fast.body).toHaveProperty('secret');
+  });
+
+  // Regression: the three settings were folded together with `??`, which stops
+  // at the first non nullish value. A `json spaces` of 0, a normal way to spell
+  // "compact output in production", is non nullish but falsy, so it both failed
+  // the check itself and hid `json escape` behind it. The fast path then ran and
+  // wrote `<`, `>` and `&` unescaped, which is exactly what `json escape` exists
+  // to prevent when the payload is embedded in HTML.
+  it.each([
+    [
+      'a single schema',
+      (app: express.Express) => {
+        app.get('/users/:id', fastJsonSchema(userSchema, { overrideJson: true }), (_req, res) => res.json(unsafe));
+      },
+    ],
+    [
+      'an OpenAPI document',
+      (app: express.Express) => {
+        app.use(fastJsonOpenApi(document, { overrideJson: true }));
+        app.get('/users/:id', (_req, res) => res.json(unsafe));
+      },
+    ],
+  ])('still respects json escape with %s when json spaces is 0', async (_label, mount) => {
+    const app = express();
+    app.set('json spaces', 0);
+    app.set('json escape', true);
+    mount(app);
+
+    const native = express();
+    native.set('json spaces', 0);
+    native.set('json escape', true);
+    native.get('/users/:id', (_req, res) => res.json(unsafe));
+
+    const fast = await request(app).get('/users/7');
+    const reference = await request(native).get('/users/7');
+
+    expect(fast.text).toBe(reference.text);
+    expect(fast.text).not.toContain('<script>');
+    expect(fast.text).toContain('\\u003cscript\\u003e');
+  });
+
+  // A falsy `json spaces` on its own changes nothing about the bytes res.json()
+  // writes, so it must not cost the fast path.
+  it.each([0, ''])('keeps the fast path when json spaces is %j and nothing else is set', async (spaces) => {
+    const app = express();
+    app.set('json spaces', spaces);
+    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    app.get('/users/:id', (_req, res) => res.json(record));
+
+    expect((await request(app).get('/users/7')).body).toEqual(filtered);
   });
 
   it('takes the fast path when the response has no app to read settings from', async () => {
