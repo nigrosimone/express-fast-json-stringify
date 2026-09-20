@@ -2,7 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { fastJsonOpenApi, type OpenApiDocument, toOpenApiPath } from './index';
+import { fastJsonOpenApi, fastJsonSchema, type OpenApiDocument, openApiSchema, toOpenApiPath } from './index';
 
 const user = { id: 7, firstName: 'Simoné', lastName: 'Nigrò', secret: 'never serialized' };
 const serializedUser = { id: 7, firstName: 'Simoné', lastName: 'Nigrò' };
@@ -129,6 +129,33 @@ describe('toOpenApiPath', () => {
   });
 });
 
+describe('openApiSchema', () => {
+  it('returns the schema with the shared schemas attached', () => {
+    const schema = openApiSchema(openApi31, '/users/{id}', 'get') as unknown as Record<string, unknown>;
+
+    expect(schema.$ref).toBe('#/components/schemas/User');
+    expect(schema.components).toBe(openApi31.components);
+  });
+
+  it('attaches Swagger 2.0 definitions', () => {
+    const schema = openApiSchema(swagger20, '/legacy/{id}', 'get') as unknown as Record<string, unknown>;
+
+    expect(schema.definitions).toBe(swagger20.definitions);
+  });
+
+  it('picks the status and the media type', () => {
+    expect(openApiSchema(openApi31, '/users/{id}', 'get', 404)).toEqual({ type: 'object', properties: { message: { type: 'string' } }, components: openApi31.components });
+    expect(openApiSchema(openApi31, '/other-media', 'get', 200, 'application/vnd.api+json')).toMatchObject({ type: 'object' });
+  });
+
+  it('answers undefined for what the document does not describe', () => {
+    expect(openApiSchema(openApi31, '/nope', 'get')).toBeUndefined();
+    expect(openApiSchema(openApi31, '/users/{id}', 'delete')).toBeUndefined();
+    expect(openApiSchema(openApi31, '/users/{id}', 'get', 500)).toBeUndefined();
+    expect(openApiSchema(openApi31, '/other-media', 'get')).toBeUndefined();
+  });
+});
+
 describe('fastJsonOpenApi', () => {
   it.each([
     ['null', null],
@@ -137,13 +164,14 @@ describe('fastJsonOpenApi', () => {
     ['a number', 42],
     ['a document without paths', { openapi: '3.1.0' }],
   ])('rejects %s as a document', (_label, value) => {
-    expect(() => fastJsonOpenApi(value as never)).toThrow(TypeError);
-    expect(() => fastJsonOpenApi(value as never)).toThrow('express-fast-json-stringify: invalid OpenAPI document');
+    expect(() => fastJsonOpenApi(express(), value as never)).toThrow(TypeError);
+    expect(() => fastJsonOpenApi(express(), value as never)).toThrow('express-fast-json-stringify: invalid OpenAPI document');
+    expect(() => openApiSchema(value as never, '/users/{id}', 'get')).toThrow('express-fast-json-stringify: invalid OpenAPI document');
   });
 
   it('serializes with the schema of the matched route', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/users/:id', (_req, res) => res.fastJson(user));
 
     const res = await request(app).get('/users/7');
@@ -157,7 +185,7 @@ describe('fastJsonOpenApi', () => {
   it('resolves the route under a mounted router', async () => {
     const app = express();
     const router = express.Router();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     router.get('/:id', (_req, res) => res.fastJson(user));
     app.use('/users', router);
 
@@ -168,7 +196,7 @@ describe('fastJsonOpenApi', () => {
 
   it('picks the schema of the response status code', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/users/:id', (_req, res) => res.status(404).fastJson({ message: 'not found', secret: 'x' }));
 
     const res = await request(app).get('/users/9');
@@ -179,7 +207,7 @@ describe('fastJsonOpenApi', () => {
 
   it('distinguishes methods on the same path', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/users', (_req, res) => res.fastJson([user, user]));
     app.post('/users', (_req, res) => res.status(201).fastJson(user));
 
@@ -189,7 +217,7 @@ describe('fastJsonOpenApi', () => {
 
   it('falls back to the default response', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.post('/users', (_req, res) => res.status(500).fastJson({ error: 'boom', secret: 'x' }));
 
     const res = await request(app).post('/users');
@@ -200,7 +228,7 @@ describe('fastJsonOpenApi', () => {
 
   it('matches a wildcard status range', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/ranged', (_req, res) => res.status(202).fastJson({ ranged: true, secret: 'x' }));
 
     const res = await request(app).get('/ranged');
@@ -211,7 +239,7 @@ describe('fastJsonOpenApi', () => {
 
   it('resolves recursive references', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/tree', (_req, res) => res.fastJson({ value: 1, child: { value: 2, child: { value: 3 } } }));
 
     const res = await request(app).get('/tree');
@@ -221,7 +249,7 @@ describe('fastJsonOpenApi', () => {
 
   it('answers a HEAD request with the GET schema', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/users/:id', (_req, res) => res.fastJson(user));
 
     const res = await request(app).head('/users/7');
@@ -232,7 +260,7 @@ describe('fastJsonOpenApi', () => {
 
   it('reads a non default media type', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31, { contentType: 'application/vnd.api+json' }));
+    fastJsonOpenApi(app, openApi31, { contentType: 'application/vnd.api+json' });
     app.get('/other-media', (_req, res) => res.fastJson({ wrapped: true, secret: 'x' }));
 
     const res = await request(app).get('/other-media');
@@ -242,7 +270,7 @@ describe('fastJsonOpenApi', () => {
 
   it('falls back to the request path when no route has matched yet', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     // Answering straight from plain middleware leaves `req.route` undefined, so
     // the request path is what identifies the operation.
     app.use((req, res, next) => {
@@ -253,25 +281,61 @@ describe('fastJsonOpenApi', () => {
       next();
     });
 
-    const res = await request(app).get('/ranged');
+    for (let i = 0; i < 2; i++) {
+      const res = await request(app).get('/ranged');
 
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ranged: true });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ranged: true });
+    }
   });
 
-  it('honours a pinned path and method', async () => {
+  it('names the request path in a strict error when no route has matched', async () => {
     const app = express();
-    // The Express route does not match the document, so pin the operation.
-    app.get('/v2/people/:id', fastJsonOpenApi(openApi31, { path: '/users/{id}', method: 'get' }), (_req, res) => res.fastJson(user));
+    fastJsonOpenApi(app, openApi31, { strict: true });
+    app.use((_req, res, next) => {
+      try {
+        res.fastJson({ a: 1 });
+      } catch (error) {
+        next(error);
+      }
+    });
+    app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      res.status(500).json({ error: err.message });
+    });
+
+    const res = await request(app).get('/nowhere');
+
+    expect(res.body.error).toBe('express-fast-json-stringify: no schema for GET /nowhere');
+  });
+
+  it('serves a route the document spells differently through openApiSchema', async () => {
+    const app = express();
+    fastJsonOpenApi(app, openApi31);
+    // The Express route does not match the document, so the operation is named by hand.
+    app.get('/v2/people/:id', fastJsonSchema(openApiSchema(openApi31, '/users/{id}', 'GET')!), (_req, res) => res.fastJson(user));
 
     const res = await request(app).get('/v2/people/7');
 
     expect(res.body).toEqual(serializedUser);
   });
 
+  it('resolves the same router under each mount it has', async () => {
+    const app = express();
+    fastJsonOpenApi(app, openApi31);
+    const router = express.Router();
+    router.get('/:id', (_req, res) => res.fastJson(user));
+    // Only the first mount is documented, and the route object is the same under both.
+    app.use('/users', router);
+    app.use('/people', router);
+
+    expect((await request(app).get('/users/7')).body).toEqual(serializedUser);
+    expect((await request(app).get('/people/7')).body).toEqual(user);
+    expect((await request(app).get('/users/7')).body).toEqual(serializedUser);
+  });
+
   it('forwards the fast-json-stringify options', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31, { rounding: 'ceil' }));
+    fastJsonOpenApi(app, openApi31, { rounding: 'ceil' });
     app.get('/users/:id', (_req, res) => res.fastJson({ ...user, id: 7.2 }));
 
     const res = await request(app).get('/users/7');
@@ -281,7 +345,7 @@ describe('fastJsonOpenApi', () => {
 
   it('supports OpenAPI 3.0 nullable and ignores annotations', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi30));
+    fastJsonOpenApi(app, openApi30);
     app.get('/profile', (_req, res) => res.fastJson({ name: 'Simone', nickname: null, age: 40 }));
 
     const res = await request(app).get('/profile');
@@ -291,7 +355,7 @@ describe('fastJsonOpenApi', () => {
 
   it('supports Swagger 2.0 documents', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(swagger20));
+    fastJsonOpenApi(app, swagger20);
     app.get('/legacy/:id', (_req, res) => res.fastJson({ id: 1, label: 'old', secret: 'x' }));
 
     const res = await request(app).get('/legacy/1');
@@ -303,7 +367,7 @@ describe('fastJsonOpenApi', () => {
 describe('fastJsonOpenApi undocumented responses', () => {
   it('falls back to res.json for a route the document does not describe', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/not-in-the-document', (_req, res) => res.fastJson(user));
 
     const res = await request(app).get('/not-in-the-document');
@@ -316,7 +380,7 @@ describe('fastJsonOpenApi undocumented responses', () => {
 
   it('falls back to res.json for a status the operation does not describe', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/undocumented-status', (_req, res) => res.fastJson({ teapot: true, secret: 'x' }));
 
     const res = await request(app).get('/undocumented-status');
@@ -327,7 +391,7 @@ describe('fastJsonOpenApi undocumented responses', () => {
 
   it('falls back to res.json for an undocumented media type', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31, { contentType: 'application/x-other' }));
+    fastJsonOpenApi(app, openApi31, { contentType: 'application/x-other' });
     app.get('/users/:id', (_req, res) => res.fastJson(user));
 
     expect((await request(app).get('/users/7')).body).toEqual(user);
@@ -335,7 +399,7 @@ describe('fastJsonOpenApi undocumented responses', () => {
 
   it('throws in strict mode', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31, { strict: true }));
+    fastJsonOpenApi(app, openApi31, { strict: true });
     app.get('/not-in-the-document', (_req, res, next) => {
       try {
         res.fastJson(user);
@@ -350,17 +414,17 @@ describe('fastJsonOpenApi undocumented responses', () => {
     const res = await request(app).get('/not-in-the-document');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toContain('no application/json schema for GET /not-in-the-document');
+    expect(res.body.error).toBe('express-fast-json-stringify: no schema for GET /not-in-the-document');
   });
 });
 
 describe('fastJsonOpenApi HTTP semantics', () => {
   const build = () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/users/:id', (_req, res) => res.fastJson(user));
     app.get('/native/:id', (_req, res) => res.json(serializedUser));
-    app.get('/empty/:code', fastJsonOpenApi(openApi31, { path: '/users/{id}', method: 'get' }), (req, res) => res.status(Number(req.params.code)).fastJson(user));
+    app.get('/empty/:code', fastJsonSchema(openApiSchema(openApi31, '/users/{id}', 'get')!), (req, res) => res.status(Number(req.params.code)).fastJson(user));
     return app;
   };
 
@@ -397,7 +461,7 @@ describe('fastJsonOpenApi HTTP semantics', () => {
 describe('fastJsonOpenApi caching', () => {
   it('compiles one serializer per operation and status, and reuses it', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/users/:id', (_req, res) => res.fastJson(user));
 
     for (let i = 0; i < 5; i++) {
@@ -407,7 +471,7 @@ describe('fastJsonOpenApi caching', () => {
 
   it('caches misses too, so an undocumented route stays cheap', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(openApi31));
+    fastJsonOpenApi(app, openApi31);
     app.get('/nope', (_req, res) => res.fastJson({ a: 1 }));
 
     for (let i = 0; i < 3; i++) {

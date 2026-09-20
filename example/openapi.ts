@@ -64,18 +64,16 @@ const document: OpenApiDocument = {
 
 const app = express();
 
-// One middleware for the whole app: every route documented above gets a
+// Once for the whole app, no middleware: every route documented above gets a
 // compiled serializer, chosen per route and per status code.
 //
 // `overrideJson` also routes plain `res.json()` through it, so the routes below
 // never mention this library — which is what adopting it in an existing
 // codebase looks like.
-app.use(
-  fastJsonOpenApi(document, {
-    overrideJson: true,
-    onError: (error) => console.log(`    [onError] ${(error as Error).message}`),
-  }),
-);
+fastJsonOpenApi(app, document, {
+  overrideJson: true,
+  onError: (error) => console.log(`    [onError] ${(error as Error).message}`),
+});
 
 const record = {
   id: 7,

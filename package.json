@@ -67,6 +67,7 @@
     "eslint-plugin-functional": "^10.0.0",
     "eslint-plugin-import-x": "^4.17.1",
     "express": "^5.2.1",
+    "fulmine.js": "^5.21.2",
     "gh-pages": "^6.3.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.2.0",

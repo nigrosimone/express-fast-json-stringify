@@ -14,7 +14,7 @@ import http from 'node:http';
 import express from 'express';
 import fastJson from 'fast-json-stringify';
 
-import { fastJsonSchema, type Schema } from '../src';
+import { fastJsonSchema, installFastJson, type Schema } from '../src';
 
 const schema: Schema = {
   title: 'Example Schema',
@@ -33,6 +33,8 @@ const payload = {
 };
 
 const app = express();
+// once per app: this is what adds res.fastJson()
+installFastJson(app);
 
 app.get('/', (_req, res, next) => {
   try {

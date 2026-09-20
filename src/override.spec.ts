@@ -2,7 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
-import { fastJsonOpenApi, fastJsonSchema, type OpenApiDocument, type Schema } from './index';
+import { fastJsonOpenApi, fastJsonSchema, installFastJson, type OpenApiDocument, type Schema } from './index';
 
 const record = { id: 7, firstName: 'Simoné', lastName: 'Nigrò', secret: 'never serialized' };
 const filtered = { id: 7, firstName: 'Simoné', lastName: 'Nigrò' };
@@ -40,7 +40,7 @@ const document: OpenApiDocument = {
 describe('overrideJson with an OpenAPI document', () => {
   it('is off by default, so res.json keeps the stock behavior', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document));
+    fastJsonOpenApi(app, document);
     app.get('/users/:id', (_req, res) => res.json(record));
 
     expect((await request(app).get('/users/7')).body).toEqual(record);
@@ -48,7 +48,7 @@ describe('overrideJson with an OpenAPI document', () => {
 
   it('serializes res.json through the schema when enabled', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (_req, res) => res.json(record));
 
     const res = await request(app).get('/users/7');
@@ -62,7 +62,7 @@ describe('overrideJson with an OpenAPI document', () => {
   // single hook covers both entry points.
   it('also covers res.send(object)', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (_req, res) => res.send(record));
 
     expect((await request(app).get('/users/7')).body).toEqual(filtered);
@@ -70,7 +70,7 @@ describe('overrideJson with an OpenAPI document', () => {
 
   it('leaves res.send of a string, buffer or null alone', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/text', (_req, res) => res.send('plain'));
     app.get('/buffer', (_req, res) => res.send(Buffer.from('bytes')));
     app.get('/null', (_req, res) => res.send(null));
@@ -82,7 +82,7 @@ describe('overrideJson with an OpenAPI document', () => {
 
   it('picks the schema of the response status code', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (_req, res) => res.status(404).json({ message: 'gone', secret: 'x' }));
 
     const res = await request(app).get('/users/9');
@@ -93,7 +93,7 @@ describe('overrideJson with an OpenAPI document', () => {
 
   it('leaves undocumented routes untouched', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/health', (_req, res) => res.json({ status: 'ok', extra: true }));
 
     const res = await request(app).get('/health');
@@ -104,7 +104,7 @@ describe('overrideJson with an OpenAPI document', () => {
 
   it('leaves undocumented status codes untouched', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (_req, res) => res.status(503).json(record));
 
     expect((await request(app).get('/users/7')).body).toEqual(record);
@@ -112,7 +112,7 @@ describe('overrideJson with an OpenAPI document', () => {
 
   it('still matches the headers res.json produces', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (_req, res) => res.json(record));
     app.get('/native', (_req, res) => res.json(filtered));
 
@@ -127,7 +127,7 @@ describe('overrideJson with an OpenAPI document', () => {
 
   it('answers 304 for a conditional request', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (_req, res) => res.json(record));
 
     const first = await request(app).get('/users/7');
@@ -138,7 +138,7 @@ describe('overrideJson with an OpenAPI document', () => {
 
   it('coexists with res.fastJson', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (httpRequest, res) => {
       if (httpRequest.query.explicit) {
         res.fastJson(record);
@@ -163,7 +163,7 @@ describe('overrideJson steps aside when it cannot match res.json', () => {
   ])('respects the %s app setting', async (setting, value) => {
     const app = express();
     app.set(setting, value);
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (_req, res) => res.json(record));
 
     const native = express();
@@ -188,13 +188,14 @@ describe('overrideJson steps aside when it cannot match res.json', () => {
     [
       'a single schema',
       (app: express.Express) => {
-        app.get('/users/:id', fastJsonSchema(userSchema, { overrideJson: true }), (_req, res) => res.json(unsafe));
+        installFastJson(app, { overrideJson: true });
+        app.get('/users/:id', fastJsonSchema(userSchema), (_req, res) => res.json(unsafe));
       },
     ],
     [
       'an OpenAPI document',
       (app: express.Express) => {
-        app.use(fastJsonOpenApi(document, { overrideJson: true }));
+        fastJsonOpenApi(app, document, { overrideJson: true });
         app.get('/users/:id', (_req, res) => res.json(unsafe));
       },
     ],
@@ -222,33 +223,16 @@ describe('overrideJson steps aside when it cannot match res.json', () => {
   it.each([0, ''])('keeps the fast path when json spaces is %j and nothing else is set', async (spaces) => {
     const app = express();
     app.set('json spaces', spaces);
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/users/:id', (_req, res) => res.json(record));
 
     expect((await request(app).get('/users/7')).body).toEqual(filtered);
   });
 
-  it('takes the fast path when the response has no app to read settings from', async () => {
-    const app = express();
-    app.use((_req, res, next) => {
-      Object.defineProperty(res, 'app', { value: undefined, configurable: true });
-      next();
-    });
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
-    app.get('/users/:id', (_req, res) => res.json(record));
-
-    const res = await request(app).get('/users/7');
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(filtered);
-    // No app means no `etag fn` to consult.
-    expect(res.headers['etag']).toBeUndefined();
-  });
-
   it('falls back to res.json when the serializer throws, and reports it', async () => {
     const onError = vi.fn();
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true, onError }));
+    fastJsonOpenApi(app, document, { overrideJson: true, onError });
     // `n` is required by the schema, so the compiled serializer rejects this body.
     app.get('/strict-number', (_req, res) => res.json({ wrong: 'shape' }));
 
@@ -263,7 +247,7 @@ describe('overrideJson steps aside when it cannot match res.json', () => {
 
   it('falls back silently when no onError is given', async () => {
     const app = express();
-    app.use(fastJsonOpenApi(document, { overrideJson: true }));
+    fastJsonOpenApi(app, document, { overrideJson: true });
     app.get('/strict-number', (_req, res) => res.json({ wrong: 'shape' }));
 
     const res = await request(app).get('/strict-number');
@@ -280,13 +264,15 @@ describe('overrideJson with a single schema', () => {
 
   it('serializes a 2xx response through the schema', async () => {
     const app = express();
-    app.get('/users/:id', fastJsonSchema(schema, { overrideJson: true }), (_req, res) => res.json(record));
+    installFastJson(app, { overrideJson: true });
+    app.get('/users/:id', fastJsonSchema(schema), (_req, res) => res.json(record));
 
     expect((await request(app).get('/users/7')).body).toEqual(filtered);
   });
 
   it('is off by default', async () => {
     const app = express();
+    installFastJson(app);
     app.get('/users/:id', fastJsonSchema(schema), (_req, res) => res.json(record));
 
     expect((await request(app).get('/users/7')).body).toEqual(record);
@@ -296,7 +282,8 @@ describe('overrideJson with a single schema', () => {
   // rewritten into its shape.
   it.each([400, 404, 500, 503])('leaves a %i response to the stock res.json', async (status) => {
     const app = express();
-    app.get('/users/:id', fastJsonSchema(schema, { overrideJson: true }), (_req, res) => res.status(status).json({ error: 'boom', detail: 'kept' }));
+    installFastJson(app, { overrideJson: true });
+    app.get('/users/:id', fastJsonSchema(schema), (_req, res) => res.status(status).json({ error: 'boom', detail: 'kept' }));
 
     const res = await request(app).get('/users/7');
 
@@ -306,14 +293,16 @@ describe('overrideJson with a single schema', () => {
 
   it('covers res.send(object) too', async () => {
     const app = express();
-    app.get('/users/:id', fastJsonSchema(schema, { overrideJson: true }), (_req, res) => res.send(record));
+    installFastJson(app, { overrideJson: true });
+    app.get('/users/:id', fastJsonSchema(schema), (_req, res) => res.send(record));
 
     expect((await request(app).get('/users/7')).body).toEqual(filtered);
   });
 
   it('still forwards the fast-json-stringify options', async () => {
     const app = express();
-    app.get('/users/:id', fastJsonSchema(schema, { overrideJson: true, rounding: 'ceil' }), (_req, res) => res.json({ ...record, id: 7.2 }));
+    installFastJson(app, { overrideJson: true });
+    app.get('/users/:id', fastJsonSchema(schema, { rounding: 'ceil' }), (_req, res) => res.json({ ...record, id: 7.2 }));
 
     expect((await request(app).get('/users/7')).body.id).toBe(8);
   });
@@ -322,7 +311,8 @@ describe('overrideJson with a single schema', () => {
     const onError = vi.fn();
     const app = express();
     const strict: Schema = { type: 'object', properties: { n: { type: 'integer' } }, required: ['n'], additionalProperties: false };
-    app.get('/x', fastJsonSchema(strict, { overrideJson: true, onError }), (_req, res) => res.json({ wrong: 'shape' }));
+    installFastJson(app, { overrideJson: true, onError });
+    app.get('/x', fastJsonSchema(strict), (_req, res) => res.json({ wrong: 'shape' }));
 
     await request(app).get('/x');
 

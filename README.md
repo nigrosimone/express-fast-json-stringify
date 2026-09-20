@@ -41,15 +41,29 @@ const schema: Schema = {
 };
 ```
 
-## Applying the Middleware
+## Installing it on the app
 
-Use the `fastJsonSchema` middleware in your Express routes, passing the schema object as an argument. This will set up the optimized JSON serialization for that route.
+Call `installFastJson(app)` once, when the app is built. It adds `res.fastJson()` to the
+responses of that app, on `app.response`, so no request pays for it.
 
 ```ts
 import express from 'express';
-import { fastJsonSchema, Schema } from 'express-fast-json-stringify';
+import { installFastJson } from 'express-fast-json-stringify';
 
 const app = express();
+installFastJson(app);
+```
+
+## Applying the Middleware
+
+Use the `fastJsonSchema` middleware in your Express routes, passing the schema object as an argument. It picks the serializer for that route.
+
+```ts
+import express from 'express';
+import { fastJsonSchema, installFastJson, Schema } from 'express-fast-json-stringify';
+
+const app = express();
+installFastJson(app);
 
 const exampleSchema: Schema = {
   title: 'Example Schema',
@@ -70,9 +84,10 @@ Instead of using the default `res.json()` method, use the `res.fastJson()` metho
 
 ```ts
 import express from 'express';
-import { fastJsonSchema, Schema } from 'express-fast-json-stringify';
+import { fastJsonSchema, installFastJson, Schema } from 'express-fast-json-stringify';
 
 const app = express();
+installFastJson(app);
 
 const schema: Schema = {
   title: 'Example Schema',
@@ -104,12 +119,13 @@ app.get('/', fastJsonSchema(schema), (req, res, next) => {
 ## Response semantics
 
 `res.fastJson()` is a drop-in replacement for `res.json()`: only the
-serialization changes, every HTTP detail stays the same.
+serialization changes. The string then goes through `res.send()`, the same
+call `res.json()` makes, so every HTTP detail is the one the framework gives.
 
 | Behavior             | What `res.fastJson()` does                                                                          |
 | -------------------- | --------------------------------------------------------------------------------------------------- |
-| `Content-Type`       | `application/json; charset=utf-8`, unless the route already set one with `res.type()`.              |
-| `Content-Length`     | Always set, from the byte length of the payload, so the response is never chunked.                  |
+| `Content-Type`       | `application/json; charset=utf-8`; a type the route set with `res.type()` is kept, charset added.   |
+| `Content-Length`     | Set by `res.send()`, so the response is never chunked.                                              |
 | `ETag`               | Follows the app `etag` setting, exactly like `res.send()`. Set `app.set('etag', false)` to skip it. |
 | Conditional requests | A matching `If-None-Match` answers `304` with no body.                                              |
 | `204` and `304`      | No body and no `Content-Type`/`Content-Length`/`Transfer-Encoding`.                                 |
@@ -118,11 +134,16 @@ serialization changes, every HTTP detail stays the same.
 The payload is serialized before the status code is inspected, so a body that
 does not match the schema still throws on a `204` — just like `res.json()`.
 
+A route without a schema falls back to `res.json()`. Pass
+`installFastJson(app, { strict: true })` to get an error instead.
+
 ## Taking the schema from your OpenAPI document
 
 If you already publish an OpenAPI (or Swagger) document, the response schemas
 are written there — no need to repeat them in the routes. `fastJsonOpenApi`
-takes that document and resolves the schema per route and per status code:
+takes that document and resolves the schema per route and per status code.
+It installs itself, so there is no `installFastJson(app)` to call and no
+middleware runs per request:
 
 ```ts
 import express from 'express';
@@ -132,8 +153,8 @@ import document from './openapi.json' with { type: 'json' };
 
 const app = express();
 
-// One middleware for the whole app.
-app.use(fastJsonOpenApi(document));
+// Once for the whole app.
+fastJsonOpenApi(app, document);
 
 app.get('/users/:id', (req, res, next) => {
   try {
@@ -181,14 +202,20 @@ There is no dependency on any of them: the middleware only reads `paths`,
 - **OpenAPI 3.0 and 3.1** are both supported; `nullable: true` is honoured and
   annotation keywords (`example`, `discriminator`, `xml`, ...) are ignored.
 
-Routes the document does not describe fall back to `res.json()`, so adding the
-middleware app-wide cannot break an undocumented endpoint. Pass
-`{ strict: true }` to get an error instead of a silent fallback.
+Routes the document does not describe fall back to `res.json()`, so installing
+it app-wide cannot break an undocumented endpoint. Pass `{ strict: true }` to
+get an error instead of a silent fallback.
+
+The serializer of a route is found from the route object the framework
+matched and kept beside it, so a request does not rebuild the path or look up
+a string.
 
 ```ts
-// Read a different media type, pin an operation, forward fast-json-stringify options
-app.use(fastJsonOpenApi(document, { contentType: 'application/vnd.api+json' }));
-app.get('/v2/people/:id', fastJsonOpenApi(document, { path: '/users/{id}', method: 'get' }), handler);
+// Read a different media type, forward fast-json-stringify options
+fastJsonOpenApi(app, document, { contentType: 'application/vnd.api+json', rounding: 'ceil' });
+
+// A route the document spells differently: take the schema out by hand
+app.get('/v2/people/:id', fastJsonSchema(openApiSchema(document, '/users/{id}', 'get')!), handler);
 ```
 
 Because the schema decides what gets written, a property that is not in the
@@ -202,16 +229,16 @@ that means editing every `res.json()` call site, which is a lot of churn for a
 serialization change. `overrideJson` removes that step:
 
 ```ts
-app.use(fastJsonOpenApi(document, { overrideJson: true }));
+fastJsonOpenApi(app, document, { overrideJson: true });
 
 // Unchanged route. It is now serialized from the `get /users/{id}` -> `200`
 // schema, with no edit at the call site.
 app.get('/users/:id', (req, res) => res.json(user));
 ```
 
-Only `res.json` is replaced. Express implements `res.send(object)` by calling
-`res.json(object)`, so both entry points are covered by the one hook, while
-`res.send` of a string or a Buffer is left alone.
+Only `res.json` is replaced, once, on `app.response`. Express implements
+`res.send(object)` by calling `res.json(object)`, so both entry points are
+covered by the one hook, while `res.send` of a string or a Buffer is left alone.
 
 **The override cannot break a route.** It steps aside, and the stock
 `res.json()` runs, whenever:
@@ -223,24 +250,24 @@ Only `res.json` is replaced. Express implements `res.send(object)` by calling
   missing. Pass `onError` to be told when that happens:
 
 ```ts
-app.use(
-  fastJsonOpenApi(document, {
-    overrideJson: true,
-    onError: (error, req) => logger.warn({ error, url: req.originalUrl }, 'schema mismatch'),
-  }),
-);
+fastJsonOpenApi(app, document, {
+  overrideJson: true,
+  onError: (error, req) => logger.warn({ error, url: req.originalUrl }, 'schema mismatch'),
+});
 ```
 
 `strict` does not apply here: it governs explicit `res.fastJson()` calls, while
 an overridden `res.json()` always falls back rather than throw.
 
-`fastJsonSchema` accepts `overrideJson` too, with one difference: a single
-schema describes the _successful_ payload, so only `2xx` responses take the fast
-path. An error body would otherwise be rewritten into the shape of the success
-schema.
+`installFastJson(app, { overrideJson: true })` does the same for the routes
+that carry a `fastJsonSchema`, with one difference: a single schema describes
+the _successful_ payload, so only `2xx` responses take the fast path. An error
+body would otherwise be rewritten into the shape of the success schema.
 
 ```ts
-app.get('/users/:id', fastJsonSchema(userSchema, { overrideJson: true }), (req, res) => {
+installFastJson(app, { overrideJson: true });
+
+app.get('/users/:id', fastJsonSchema(userSchema), (req, res) => {
   res.json(user); // serialized through the schema
   res.status(500).json({ error: 'boom' }); // untouched, stock res.json()
 });
@@ -264,6 +291,10 @@ How much you gain depends on the payload, and on a current V8 it is not a win ac
 | long strings                               | slower                                      |
 
 Run `npm run example` to get the numbers for your own Node.js version and payload shape before adopting it in a hot path.
+
+### On fulmine.js
+
+[fulmine.js](https://www.npmjs.com/package/fulmine.js) is Express on uWebSockets.js, and it reads the source of every middleware and handler at startup: when none of them can read a request header, the header copy is skipped for that route. The `fastJsonSchema` middleware only writes `res.locals` and calls `next()`, so it keeps that skip, and so does a handler calling `res.json()`. A handler calling `res.fastJson()` does not, because that is not a method fulmine knows, so on fulmine prefer `overrideJson` and plain `res.json()`. Measured on an API endpoint with eleven request headers, the previous design of this package cost 5 to 9 microseconds of CPU per request there; this one is within half a microsecond of serializing by hand.
 
 ## Conclusion
 

@@ -2,7 +2,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { fastJsonSchema, type Schema } from './index';
+import { fastJsonSchema, installFastJson, type Schema } from './index';
 
 const data = {
   firstName: 'Simone',
@@ -35,6 +35,7 @@ const schema: Schema = {
 };
 
 const app = express();
+installFastJson(app);
 
 app.use(express.json());
 
@@ -67,6 +68,11 @@ app.get('/preset-type', fastJsonSchema(schema), (_req, res) => {
   res.fastJson(accented);
 });
 
+app.get('/preset-type-native', (_req, res) => {
+  res.type('application/vnd.api+json');
+  res.json(accented);
+});
+
 app.get('/preset-etag', fastJsonSchema(schema), (_req, res) => {
   res.setHeader('ETag', 'W/"custom"');
   res.fastJson(accented);
@@ -80,18 +86,106 @@ app.get('/chained-status', fastJsonSchema(schema), (_req, res) => {
   res.status(201).fastJson(accented);
 });
 
+app.get('/status-filtered/:code', fastJsonSchema(schema), (req, res) => {
+  res.status(Number(req.params.code)).fastJson({ ...accented, secret: 'never serialized' });
+});
+
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: err.message });
 });
 
 /** Same routes, on an app with ETag generation switched off. */
 const noEtagApp = express();
+installFastJson(noEtagApp);
 noEtagApp.set('etag', false);
 noEtagApp.get('/fast', fastJsonSchema(schema), (_req, res) => {
   res.fastJson(accented);
 });
 noEtagApp.get('/native', (_req, res) => {
   res.json(accented);
+});
+
+describe('installFastJson', () => {
+  it.each([
+    ['undefined', undefined],
+    ['null', null],
+    ['a router', express.Router()],
+    ['an object without a response prototype', {}],
+    ['a response prototype without json', { response: {} }],
+  ])('rejects %s as an application', (_label, value) => {
+    expect(() => installFastJson(value as never)).toThrow(TypeError);
+    expect(() => installFastJson(value as never)).toThrow('express-fast-json-stringify: an Express application is required');
+  });
+
+  it('adds res.fastJson to every response of the app', async () => {
+    const bare = express();
+    installFastJson(bare);
+    bare.get('/', (_req, res) => res.fastJson(accented));
+
+    const res = await request(bare).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(JSON.stringify(accented));
+    expect(res.headers['content-type']).toBe('application/json; charset=utf-8');
+  });
+
+  it('is what makes res.fastJson exist', async () => {
+    const bare = express();
+    bare.get('/', fastJsonSchema(schema), (_req, res, next) => {
+      try {
+        res.fastJson(accented);
+      } catch (error) {
+        next(error);
+      }
+    });
+    bare.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      res.status(500).json({ error: err.message });
+    });
+
+    const res = await request(bare).get('/');
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'res.fastJson is not a function' });
+  });
+
+  it('can be called again to change the options', async () => {
+    const twice = express();
+    installFastJson(twice, { strict: true });
+    installFastJson(twice);
+    twice.get('/', (_req, res) => res.fastJson(accented));
+
+    const res = await request(twice).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(accented);
+  });
+
+  it('leaves the stock res.json in place unless overrideJson is asked', () => {
+    const plain = express();
+    const stockJson = plain.response.json;
+    installFastJson(plain, { overrideJson: true });
+    expect(plain.response.json).not.toBe(stockJson);
+    installFastJson(plain);
+    expect(plain.response.json).toBe(stockJson);
+  });
+
+  it('does not leak into another application', async () => {
+    const other = express();
+    other.get('/', (_req, res, next) => {
+      try {
+        res.fastJson(accented);
+      } catch (error) {
+        next(error);
+      }
+    });
+    other.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      res.status(500).json({ error: err.message });
+    });
+
+    const res = await request(other).get('/');
+
+    expect(res.body).toEqual({ error: 'res.fastJson is not a function' });
+  });
 });
 
 describe('fastJsonSchema', () => {
@@ -112,12 +206,42 @@ describe('fastJsonSchema', () => {
     expect(res.body).not.toHaveProperty('secret');
   });
 
-  it('leaves res.fastJson undefined on routes without the middleware', async () => {
-    const res = await request(app).post('/without-schema').send({ data });
+  it('falls back to res.json on a route without a schema', async () => {
+    const res = await request(app)
+      .post('/without-schema')
+      .send({ data: { ...data, secret: 'kept' } });
 
-    expect(res.ok).toBe(false);
-    expect(res.body).toMatchObject({ error: 'res.fastJson is not a function' });
+    expect(res.ok).toBe(true);
+    expect(res.body).toEqual({ ...data, secret: 'kept' });
     expect(res.type).toBe('application/json');
+  });
+
+  it('throws on a route without a schema in strict mode', async () => {
+    const strict = express();
+    installFastJson(strict, { strict: true });
+    strict.get('/users/:id', (_req, res, next) => {
+      try {
+        res.fastJson(data);
+      } catch (error) {
+        next(error);
+      }
+    });
+    strict.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      res.status(500).json({ error: err.message });
+    });
+
+    const res = await request(strict).get('/users/7');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('express-fast-json-stringify: no schema for GET /users/:id');
+  });
+
+  it('applies the schema whatever the status, unlike an overridden res.json', async () => {
+    const res = await request(app).get('/status-filtered/500');
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual(accented);
+    expect(res.body).not.toHaveProperty('secret');
   });
 
   it.each([
@@ -134,6 +258,7 @@ describe('fastJsonSchema', () => {
 
   it('forwards the fast-json-stringify options', async () => {
     const strict = express();
+    installFastJson(strict);
     strict.get(
       '/',
       fastJsonSchema(
@@ -151,6 +276,16 @@ describe('fastJsonSchema', () => {
 
     expect(res.body).toEqual({ firstName: 'Simone' });
   });
+
+  it('touches nothing on the request and only res.locals on the response', () => {
+    // A framework that reads middleware source to decide what it can skip per
+    // request (fulmine) relies on this shape, see fulmine.spec.ts.
+    const source = fastJsonSchema(schema).toString();
+
+    expect(source).toContain('res.locals[');
+    expect(source).toContain('next()');
+    expect(source).not.toMatch(/req\.|res\.(?!locals\b)/);
+  });
 });
 
 describe('res.fastJson headers', () => {
@@ -164,10 +299,12 @@ describe('res.fastJson headers', () => {
   });
 
   // Regression: the content type was overwritten unconditionally.
-  it('keeps a content type the route already set', async () => {
-    const res = await request(app).get('/preset-type');
+  it('keeps a content type the route already set, as res.json() does', async () => {
+    const fast = await request(app).get('/preset-type');
+    const native = await request(app).get('/preset-type-native');
 
-    expect(res.headers['content-type']).toBe('application/vnd.api+json');
+    expect(fast.headers['content-type']).toBe('application/vnd.api+json; charset=utf-8');
+    expect(fast.headers['content-type']).toBe(native.headers['content-type']);
   });
 
   // Regression: without an explicit Content-Length the response fell back to
@@ -205,6 +342,7 @@ describe('res.fastJson headers', () => {
 
   it('honours a custom ETag function', async () => {
     const custom = express();
+    installFastJson(custom);
     custom.set('etag', () => '"fixed"');
     custom.get('/', fastJsonSchema(schema), (_req, res) => res.fastJson(accented));
 
@@ -215,6 +353,7 @@ describe('res.fastJson headers', () => {
 
   it('sets no ETag when a custom ETag function returns nothing', async () => {
     const custom = express();
+    installFastJson(custom);
     // Express lets a custom `etag fn` opt out per response by returning undefined.
     custom.set('etag', () => undefined);
     custom.get('/', fastJsonSchema(schema), (_req, res) => res.fastJson(accented));
@@ -306,32 +445,10 @@ describe('res.fastJson empty responses', () => {
   });
 });
 
-describe('res.fastJson outside of Express', () => {
-  // The middleware only relies on the Node response API plus two optional
-  // Express extras, so it must not explode when they are missing.
-  it('works when the response has no app and no fresh getter', async () => {
-    const bare = express();
-    bare.get('/', (req, res, next) => {
-      Reflect.deleteProperty(req, 'app');
-      Object.defineProperty(res, 'app', { value: undefined, configurable: true });
-      next();
-    });
-    bare.get('/', fastJsonSchema(schema), (_req, res) => {
-      res.fastJson(accented);
-    });
-
-    const res = await request(bare).get('/');
-
-    expect(res.status).toBe(200);
-    expect(res.text).toBe(JSON.stringify(accented));
-    expect(res.headers['etag']).toBeUndefined();
-    expect(res.headers['content-type']).toBe('application/json; charset=utf-8');
-  });
-});
-
 describe('typings', () => {
   it('accepts a middleware in every Express registration shape', () => {
     const typed: Express = express();
+    installFastJson(typed);
     const middleware = fastJsonSchema(schema);
 
     typed.use(middleware);

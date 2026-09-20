@@ -18,6 +18,8 @@
     "execa",
     "exponentiate",
     "Fastify",
+    "fulmine",
+    "Fulmine",
     "globby",
     "ipsum",
     "jsdoc",
@@ -26,13 +28,13 @@
     "lorem",
     "mkdir",
     "Nigro",
+    "Nigrò",
     "nigrosimone",
-    "Nigr\u00f2",
     "openapi",
     "paypalme",
     "prettierignore",
     "sandboxed",
-    "Simon\u00e9",
+    "Simoné",
     "snwp",
     "stackblitz",
     "transpiled",
@@ -42,11 +44,5 @@
     "vitest"
   ],
   "flagWords": [],
-  "ignorePaths": [
-    "package.json",
-    "package-lock.json",
-    "yarn.lock",
-    "tsconfig.json",
-    "node_modules/**"
-  ]
+  "ignorePaths": ["package.json", "package-lock.json", "yarn.lock", "tsconfig.json", "node_modules/**"]
 }
