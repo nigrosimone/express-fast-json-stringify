@@ -1,15 +1,30 @@
 # Changelog
 
+## [2.0.0](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.3.0...v2.0.0) (2026-09-20)
+
+### ⚠ BREAKING CHANGES
+
+- install once on app.response, the middlewares only choose the schema and the string goes through res.send
+
+### Features
+
+- add a landing page with links to fast-json and native-json endpoints ([882c2ed](https://github.com/nigrosimone/express-fast-json-stringify/commit/882c2ed6b191e059f49381be2abf0ca017474140))
+- install once on app.response, the middlewares only choose the schema and the string goes through res.send ([83ab193](https://github.com/nigrosimone/express-fast-json-stringify/commit/83ab19300aad0d19c9e77288832f35c378a517bd))
+
+### Bug Fixes
+
+- correct json settings check to avoid false negatives with falsy values ([bc13964](https://github.com/nigrosimone/express-fast-json-stringify/commit/bc139640fc7732dfb4081a8395d1260df83e6d51))
+
 ## [1.3.0](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.2.9...v1.3.0) (2026-07-26)
 
 ### Features
 
-* derive the schema from an OpenAPI or Swagger document ([5ce6622](https://github.com/nigrosimone/express-fast-json-stringify/commit/5ce6622fd216df1074e844c254bef0c7731205cd))
-* opt in override of res.json, so adoption needs no call site changes ([bcfda45](https://github.com/nigrosimone/express-fast-json-stringify/commit/bcfda4579ac8380f53c525b5cadcbc177e835b9c))
+- derive the schema from an OpenAPI or Swagger document ([5ce6622](https://github.com/nigrosimone/express-fast-json-stringify/commit/5ce6622fd216df1074e844c254bef0c7731205cd))
+- opt in override of res.json, so adoption needs no call site changes ([bcfda45](https://github.com/nigrosimone/express-fast-json-stringify/commit/bcfda4579ac8380f53c525b5cadcbc177e835b9c))
 
 ### Bug Fixes
 
-* align res.fastJson with res.json HTTP semantics; add CI and vitest ([f2c8558](https://github.com/nigrosimone/express-fast-json-stringify/commit/f2c85584c105ce24c6c7327382b6b80022aade10))
+- align res.fastJson with res.json HTTP semantics; add CI and vitest ([f2c8558](https://github.com/nigrosimone/express-fast-json-stringify/commit/f2c85584c105ce24c6c7327382b6b80022aade10))
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
@@ -17,33 +32,29 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [1.2.8](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.2.6...v1.2.8) (2024-09-29)
 
-
 ### Bug Fixes
 
-* global type ([56fa47c](https://github.com/nigrosimone/express-fast-json-stringify/commit/56fa47c6b395a1de89dd85bc67f55c8cd3f5d852))
+- global type ([56fa47c](https://github.com/nigrosimone/express-fast-json-stringify/commit/56fa47c6b395a1de89dd85bc67f55c8cd3f5d852))
 
 ### [1.2.6](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.2.4...v1.2.6) (2024-09-29)
 
-
 ### Bug Fixes
 
-* export ([b753280](https://github.com/nigrosimone/express-fast-json-stringify/commit/b753280af8af5aea830715405d404f3fad6f43d7))
+- export ([b753280](https://github.com/nigrosimone/express-fast-json-stringify/commit/b753280af8af5aea830715405d404f3fad6f43d7))
 
 ### [1.2.4](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.2.2...v1.2.4) (2024-09-29)
 
-
 ### Bug Fixes
 
-* del deps ([0e9e63a](https://github.com/nigrosimone/express-fast-json-stringify/commit/0e9e63af86e647815002079b1df5ca19ff6f7632))
+- del deps ([0e9e63a](https://github.com/nigrosimone/express-fast-json-stringify/commit/0e9e63af86e647815002079b1df5ca19ff6f7632))
 
 ### [1.2.2](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.2.0...v1.2.2) (2024-09-29)
 
 ## [1.2.0](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.1.4...v1.2.0) (2024-09-29)
 
-
 ### Features
 
-* add options ([9466dc3](https://github.com/nigrosimone/express-fast-json-stringify/commit/9466dc30c20693a7ceabf2240d5d9701c76280c0))
+- add options ([9466dc3](https://github.com/nigrosimone/express-fast-json-stringify/commit/9466dc30c20693a7ceabf2240d5d9701c76280c0))
 
 ### [1.1.4](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.1.2...v1.1.4) (2024-09-29)
 
@@ -51,14 +62,12 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## 1.1.0 (2024-09-29)
 
-
 ### Features
 
-* first commit ([5e3cc3e](https://github.com/nigrosimone/express-fast-json-stringify/commit/5e3cc3e46fc0d35c07299697d1133636d21bee9b))
-* npmignore ([364b397](https://github.com/nigrosimone/express-fast-json-stringify/commit/364b397ec15c14846c427c8c395b756aec839174))
-* vscode ([f962e81](https://github.com/nigrosimone/express-fast-json-stringify/commit/f962e8145aeaa517c8b80dc642f5bca6139dff4d))
-
+- first commit ([5e3cc3e](https://github.com/nigrosimone/express-fast-json-stringify/commit/5e3cc3e46fc0d35c07299697d1133636d21bee9b))
+- npmignore ([364b397](https://github.com/nigrosimone/express-fast-json-stringify/commit/364b397ec15c14846c427c8c395b756aec839174))
+- vscode ([f962e81](https://github.com/nigrosimone/express-fast-json-stringify/commit/f962e8145aeaa517c8b80dc642f5bca6139dff4d))
 
 ### Bug Fixes
 
-* ignore publish ([ca95f45](https://github.com/nigrosimone/express-fast-json-stringify/commit/ca95f450e1ce22f957fff4cd9f7520386ee70962))
+- ignore publish ([ca95f45](https://github.com/nigrosimone/express-fast-json-stringify/commit/ca95f450e1ce22f957fff4cd9f7520386ee70962))
