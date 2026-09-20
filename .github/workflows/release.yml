@@ -41,6 +41,9 @@ permissions:
 env:
   # the release commits on the runner: git hooks have no business running there
   HUSKY: 0
+  # npm 12 refuses git dependencies unless told otherwise, and fulmine.js, a dev dependency
+  # the suite runs on, takes uWebSockets.js from GitHub
+  NPM_CONFIG_ALLOW_GIT: all
 
 jobs:
   publish:
