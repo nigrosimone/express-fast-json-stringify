@@ -1,51 +1,42 @@
 import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier/flat';
-import functional from 'eslint-plugin-functional';
-import importX from 'eslint-plugin-import-x';
-import tseslint from 'typescript-eslint';
+import jsdoc from 'eslint-plugin-jsdoc';
+import globals from 'globals';
 
-export default tseslint.config(
-  { ignores: ['build/**', 'coverage/**', 'node_modules/**'] },
+export default [
+  { ignores: ['build/**', 'coverage/**', 'node_modules/**', '**/*.ts'] },
   js.configs.recommended,
   comments.recommended,
-  prettier,
   {
-    files: ['**/*.ts'],
-    extends: [tseslint.configs.recommended, functional.configs.lite],
-    plugins: { 'import-x': importX },
-    languageOptions: {
-      parserOptions: {
-        // The "everything" project: sources, specs and example.
-        project: ['./tsconfig.spec.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
+    files: ['**/*.js', '**/*.cjs'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'commonjs', globals: globals.node },
+  },
+  {
+    files: ['**/*.mjs'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.node },
+  },
+  {
     rules: {
-      '@typescript-eslint/no-namespace': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/explicit-module-boundary-types': 'off',
-      'functional/no-mixed-types': 'off',
-      'functional/no-classes': 'off',
-      'functional/prefer-immutable-types': 'off',
-      'functional/no-return-void': 'off',
-      'functional/no-throw-statements': 'off',
-      'functional/no-loop-statements': 'off',
-      'functional/no-let': 'off',
-      'functional/prefer-readonly-type': 'off',
-      'functional/immutable-data': 'off',
-      'functional/functional-parameters': 'off',
-      'functional/no-expression-statements': 'off',
-      'functional/no-conditional-statements': 'off',
-      'import-x/order': [
-        'error',
-        {
-          'newlines-between': 'always',
-          alphabetize: { order: 'asc' },
-        },
-      ],
-      'sort-imports': ['error', { ignoreDeclarationSort: true, ignoreCase: true }],
+      'no-unused-vars': ['error', { args: 'none', caughtErrors: 'none', ignoreRestSiblings: true }],
+      eqeqeq: ['error', 'smart'],
+      'no-var': 'error',
+      'prefer-const': ['error', { destructuring: 'all' }],
     },
   },
-);
+  {
+    // every function in src carries a JSDoc block, and the tags in it have to be true: the type
+    // checker reads them, and src/index.d.ts is the only other place the types are written
+    files: ['src/**/*.js'],
+    plugins: { jsdoc },
+    settings: { jsdoc: { mode: 'typescript' } },
+    rules: {
+      'jsdoc/require-jsdoc': ['error', { require: { ArrowFunctionExpression: true, FunctionDeclaration: true, FunctionExpression: false } }],
+      'jsdoc/check-param-names': 'error',
+      'jsdoc/check-tag-names': 'error',
+      'jsdoc/check-types': 'error',
+      'jsdoc/valid-types': 'error',
+    },
+  },
+  prettier,
+];

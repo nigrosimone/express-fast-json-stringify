@@ -11,6 +11,10 @@
     "circleci",
     "codecov",
     "commitlint",
+    "deopt",
+    "deoptimize",
+    "deoptimizes",
+    "deopts",
     "dependabot",
     "dolor",
     "editorconfig",
@@ -26,6 +30,8 @@
     "jsonschema",
     "libauth",
     "lorem",
+    "Maglev",
+    "maglev",
     "mkdir",
     "Nigro",
     "Nigrò",
@@ -44,5 +50,5 @@
     "vitest"
   ],
   "flagWords": [],
-  "ignorePaths": ["package.json", "package-lock.json", "yarn.lock", "tsconfig.json", "node_modules/**"]
+  "ignorePaths": ["package.json", "package-lock.json", "yarn.lock", "node_modules/**", "tsconfig.json"]
 }

@@ -13,9 +13,9 @@ import http from 'node:http';
 
 import express from 'express';
 
-import { fastJsonOpenApi, type OpenApiDocument } from '../src';
+import { fastJsonOpenApi } from '../src/index.js';
 
-const document: OpenApiDocument = {
+const document = {
   openapi: '3.1.0',
   paths: {
     '/users/{id}': {
@@ -72,7 +72,7 @@ const app = express();
 // codebase looks like.
 fastJsonOpenApi(app, document, {
   overrideJson: true,
-  onError: (error) => console.log(`    [onError] ${(error as Error).message}`),
+  onError: (error) => console.log(`    [onError] ${error.message}`),
 });
 
 const record = {
@@ -107,10 +107,8 @@ app.get('/mismatch', (_req, res) => {
   res.json({ nothing: 'like the schema' });
 });
 
-type Reply = { status: number; headers: http.IncomingHttpHeaders; body: string };
-
-const send = (port: number, path: string, method = 'GET') =>
-  new Promise<Reply>((resolve, reject) => {
+const send = (port, path, method = 'GET') =>
+  new Promise((resolve, reject) => {
     const req = http.request({ host: '127.0.0.1', port, path, method }, (res) => {
       let body = '';
       res.setEncoding('utf8');
@@ -121,7 +119,7 @@ const send = (port: number, path: string, method = 'GET') =>
     req.end();
   });
 
-const show = (label: string, reply: Reply) => {
+const show = (label, reply) => {
   console.log(`\n${label}`);
   console.log(`    status         ${reply.status}`);
   console.log(`    content-type   ${reply.headers['content-type'] ?? '—'}`);

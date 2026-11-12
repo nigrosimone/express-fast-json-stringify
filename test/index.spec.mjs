@@ -1,8 +1,8 @@
-import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { fastJsonSchema, installFastJson, type Schema } from './index';
+import { fastJsonSchema, installFastJson } from '../src/index.js';
 
 const data = {
   firstName: 'Simone',
@@ -17,7 +17,7 @@ const accented = {
   age: 40,
 };
 
-const schema: Schema = {
+const schema = {
   title: 'Example Schema',
   type: 'object',
   properties: {
@@ -90,7 +90,7 @@ app.get('/status-filtered/:code', fastJsonSchema(schema), (req, res) => {
   res.status(Number(req.params.code)).fastJson({ ...accented, secret: 'never serialized' });
 });
 
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message });
 });
 
@@ -113,8 +113,8 @@ describe('installFastJson', () => {
     ['an object without a response prototype', {}],
     ['a response prototype without json', { response: {} }],
   ])('rejects %s as an application', (_label, value) => {
-    expect(() => installFastJson(value as never)).toThrow(TypeError);
-    expect(() => installFastJson(value as never)).toThrow('express-fast-json-stringify: an Express application is required');
+    expect(() => installFastJson(value)).toThrow(TypeError);
+    expect(() => installFastJson(value)).toThrow('express-fast-json-stringify: an Express application is required');
   });
 
   it('adds res.fastJson to every response of the app', async () => {
@@ -138,7 +138,7 @@ describe('installFastJson', () => {
         next(error);
       }
     });
-    bare.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    bare.use((err, _req, res, _next) => {
       res.status(500).json({ error: err.message });
     });
 
@@ -178,7 +178,7 @@ describe('installFastJson', () => {
         next(error);
       }
     });
-    other.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    other.use((err, _req, res, _next) => {
       res.status(500).json({ error: err.message });
     });
 
@@ -226,7 +226,7 @@ describe('fastJsonSchema', () => {
         next(error);
       }
     });
-    strict.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    strict.use((err, _req, res, _next) => {
       res.status(500).json({ error: err.message });
     });
 
@@ -252,8 +252,8 @@ describe('fastJsonSchema', () => {
     ['a string', 'not-a-schema'],
     ['a number', 42],
   ])('rejects %s as a schema', (_label, value) => {
-    expect(() => fastJsonSchema(value as never)).toThrow(TypeError);
-    expect(() => fastJsonSchema(value as never)).toThrow('express-fast-json-stringify: invalid schema');
+    expect(() => fastJsonSchema(value)).toThrow(TypeError);
+    expect(() => fastJsonSchema(value)).toThrow('express-fast-json-stringify: invalid schema');
   });
 
   it('forwards the fast-json-stringify options', async () => {
@@ -447,7 +447,7 @@ describe('res.fastJson empty responses', () => {
 
 describe('typings', () => {
   it('accepts a middleware in every Express registration shape', () => {
-    const typed: Express = express();
+    const typed = express();
     installFastJson(typed);
     const middleware = fastJsonSchema(schema);
 

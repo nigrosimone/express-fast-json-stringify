@@ -21,7 +21,7 @@ on:
         options: [auto, patch, minor, major]
         default: auto
       dry_run:
-        description: 'Bump, build and test, but skip the tag, the push and the publish'
+        description: 'Bump and test, but skip the tag, the push and the publish'
         type: boolean
         default: false
 
@@ -85,7 +85,7 @@ jobs:
 
       - run: npm ci
 
-      # Builds, lints, type checks and runs the suite. Nothing is tagged or
+      # Lints, type checks and runs the suite. Nothing is tagged or
       # published until this passes.
       - run: npm test
 

@@ -14,9 +14,9 @@ import http from 'node:http';
 import express from 'express';
 import fastJson from 'fast-json-stringify';
 
-import { fastJsonSchema, installFastJson, type Schema } from '../src';
+import { fastJsonSchema, installFastJson } from '../src/index.js';
 
-const schema: Schema = {
+const schema = {
   title: 'Example Schema',
   type: 'object',
   properties: {
@@ -57,10 +57,8 @@ app.get('/native-json', (_req, res) => {
   res.json(payload);
 });
 
-type Reply = { status: number; headers: http.IncomingHttpHeaders; body: string };
-
-const send = (port: number, path: string, options: { method?: string; headers?: http.OutgoingHttpHeaders } = {}) =>
-  new Promise<Reply>((resolve, reject) => {
+const send = (port, path, options = {}) =>
+  new Promise((resolve, reject) => {
     const req = http.request({ host: '127.0.0.1', port, path, method: options.method ?? 'GET', headers: options.headers }, (res) => {
       let body = '';
       res.setEncoding('utf8');
@@ -73,7 +71,7 @@ const send = (port: number, path: string, options: { method?: string; headers?: 
 
 const HEADERS = ['content-type', 'content-length', 'etag', 'transfer-encoding'];
 
-const show = (label: string, reply: Reply) => {
+const show = (label, reply) => {
   console.log(`\n${label}  →  ${reply.status}`);
   for (const header of HEADERS) {
     console.log(`    ${header.padEnd(18)} ${reply.headers[header] ?? '—'}`);
@@ -94,7 +92,7 @@ const server = app.listen(0, async () => {
 
     console.log('\n--- conditional request --------------------------------------');
 
-    const etag = fast.headers.etag as string;
+    const etag = fast.headers.etag;
     show(`If-None-Match: ${etag}`, await send(port, '/fast-json', { headers: { 'If-None-Match': etag } }));
     show('If-None-Match: W/"stale"', await send(port, '/fast-json', { headers: { 'If-None-Match': 'W/"stale"' } }));
 
@@ -107,7 +105,7 @@ const server = app.listen(0, async () => {
     console.log('    schema compiled by fast-json-stringify against the generic');
     console.log('    JSON.stringify.\n');
 
-    const measure = (fn: () => void, rounds: number) => {
+    const measure = (fn, rounds) => {
       for (let i = 0; i < Math.min(rounds, 2_000); i++) {
         fn();
       }
@@ -118,7 +116,7 @@ const server = app.listen(0, async () => {
       return performance.now() - started;
     };
 
-    const compare = (name: string, caseSchema: Schema, body: unknown, rounds: number) => {
+    const compare = (name, caseSchema, body, rounds) => {
       const stringify = fastJson(caseSchema);
       const fastMs = measure(() => stringify(body), rounds);
       const nativeMs = measure(() => JSON.stringify(body), rounds);
@@ -126,14 +124,14 @@ const server = app.listen(0, async () => {
     };
 
     const record = { id: 0, firstName: 'Simoné', lastName: 'Nigrò', age: 40, active: true };
-    const recordSchema: Schema = {
+    const recordSchema = {
       type: 'object',
       properties: { id: { type: 'integer' }, firstName: { type: 'string' }, lastName: { type: 'string' }, age: { type: 'integer' }, active: { type: 'boolean' } },
     };
 
     // Same records, but each carries 17 extra fields the schema does not describe.
     const padded = Array.from({ length: 200 }, (_, i) => {
-      const wide: Record<string, unknown> = { ...record, id: i };
+      const wide = { ...record, id: i };
       for (let k = 0; k < 17; k++) {
         wide[`extra${k}`] = `some padding value ${k}`;
       }

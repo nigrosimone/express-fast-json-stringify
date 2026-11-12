@@ -2,7 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { type Application, fastJsonOpenApi, fastJsonSchema, installFastJson, type OpenApiDocument, type Schema } from './index';
+import { fastJsonOpenApi, fastJsonSchema, installFastJson } from '../src/index.js';
 
 // Fulmine is Express on uWebSockets.js. Two things are checked here: that the package answers the
 // same bytes on it as on Express, and that it costs the framework nothing it can avoid. Fulmine
@@ -13,20 +13,20 @@ import { type Application, fastJsonOpenApi, fastJsonSchema, installFastJson, typ
 const user = { id: 7, firstName: 'Simoné', lastName: 'Nigrò', secret: 'never serialized' };
 const filtered = { id: 7, firstName: 'Simoné', lastName: 'Nigrò' };
 
-const userSchema: Schema = {
+const userSchema = {
   type: 'object',
   properties: { id: { type: 'integer' }, firstName: { type: 'string' }, lastName: { type: 'string' } },
   additionalProperties: false,
 };
 
-const document: OpenApiDocument = {
+const document = {
   openapi: '3.1.0',
   paths: {
     '/api/users/{id}': {
       get: {
         responses: {
-          '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
-          '404': { content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } }, additionalProperties: false } } } },
+          200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
+          404: { content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } }, additionalProperties: false } } } },
         },
       },
     },
@@ -34,10 +34,8 @@ const document: OpenApiDocument = {
   components: { schemas: { User: userSchema } },
 };
 
-type Factory = typeof express;
-
 /** The same application on either framework. */
-const build = (create: Factory, options: { overrideJson?: boolean } = {}) => {
+const build = (create, options = {}) => {
   const app = create();
   fastJsonOpenApi(app, document, options);
   // The mount first: fulmine 5.21.2 reads a middleware's next() as a possible fall-through into
@@ -60,7 +58,7 @@ const build = (create: Factory, options: { overrideJson?: boolean } = {}) => {
 const routes = ['/explicit/7', '/override/7', '/error/7', '/plain/7', '/empty/204', '/api/users/7', '/api/users/7?missing=1'];
 
 // what the framework signs, not the package: the date, the connection pair and its own name
-const shape = (res: request.Response) => {
+const shape = (res) => {
   const { date: _date, connection: _connection, 'keep-alive': _keepAlive, 'x-powered-by': _poweredBy, ...headers } = res.headers;
   return { status: res.status, headers, text: res.text };
 };
@@ -70,7 +68,7 @@ const shape = (res: request.Response) => {
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 
 describe.skipIf(nodeMajor < 22)('on fulmine', () => {
-  let fulmine: typeof import('fulmine.js');
+  let fulmine;
 
   beforeAll(async () => {
     fulmine = (await import('fulmine.js')).default;
@@ -78,10 +76,10 @@ describe.skipIf(nodeMajor < 22)('on fulmine', () => {
 
   it.each([false, true])('answers as Express does, overrideJson %s', async (overrideJson) => {
     const onExpress = build(express, { overrideJson });
-    const onFulmine = build(fulmine as unknown as Factory, { overrideJson });
+    const onFulmine = build(fulmine, { overrideJson });
 
     for (const route of routes) {
-      for (const method of ['get', 'head'] as const) {
+      for (const method of ['get', 'head']) {
         const expected = await request(onExpress)[method](route);
         const actual = await request(onFulmine)[method](route);
         expect(shape(actual), `${method.toUpperCase()} ${route}`).toEqual(shape(expected));
@@ -90,7 +88,7 @@ describe.skipIf(nodeMajor < 22)('on fulmine', () => {
   });
 
   it('applies the schema on both entry points', async () => {
-    const app = build(fulmine as unknown as Factory, { overrideJson: true });
+    const app = build(fulmine, { overrideJson: true });
 
     expect((await request(app).get('/explicit/7')).body).toEqual(filtered);
     expect((await request(app).get('/override/7')).body).toEqual(filtered);
@@ -100,7 +98,7 @@ describe.skipIf(nodeMajor < 22)('on fulmine', () => {
   });
 
   it('answers a conditional request with 304', async () => {
-    const app = build(fulmine as unknown as Factory, { overrideJson: true });
+    const app = build(fulmine, { overrideJson: true });
     const first = await request(app).get('/override/7');
     const second = await request(app).get('/override/7').set('If-None-Match', first.headers['etag']);
 
@@ -109,8 +107,8 @@ describe.skipIf(nodeMajor < 22)('on fulmine', () => {
   });
 
   it('keeps every route on the native path, with the header copy skipped', () => {
-    const app = build(fulmine as unknown as Factory, { overrideJson: true });
-    const report = fulmine.testing.routeReport(app as unknown as ReturnType<typeof fulmine>);
+    const app = build(fulmine, { overrideJson: true });
+    const report = fulmine.testing.routeReport(app);
 
     // res.fastJson is not a method fulmine knows, so a handler calling it keeps the copy: the
     // overridden res.json is how the schema costs nothing there
@@ -123,7 +121,7 @@ describe.skipIf(nodeMajor < 22)('on fulmine', () => {
 
   it('takes a fulmine application as it is', () => {
     const app = fulmine();
-    const typed: Application = app;
+    const typed = app;
     installFastJson(typed);
 
     expect(typeof app.response.fastJson).toBe('function');

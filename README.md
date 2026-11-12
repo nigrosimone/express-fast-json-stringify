@@ -283,12 +283,12 @@ Using `express-fast-json-stringify` offers several benefits:
 
 How much you gain depends on the payload, and on a current V8 it is not a win across the board. Measured on Node.js 26 by `npm run example`:
 
-| Case                                       | `fast-json-stringify` vs `JSON.stringify`   |
-| ------------------------------------------ | ------------------------------------------- |
-| objects carrying fields outside the schema | much faster (≈9x when 17 of 20 are dropped) |
-| a single small object                      | comparable                                  |
-| every field serialized                     | comparable                                  |
-| long strings                               | slower                                      |
+| Case                                       | `fast-json-stringify` vs `JSON.stringify`    |
+| ------------------------------------------ | -------------------------------------------- |
+| objects carrying fields outside the schema | much faster (≈11x when 17 of 20 are dropped) |
+| a single small object                      | comparable                                   |
+| every field serialized                     | comparable                                   |
+| long strings                               | slower                                       |
 
 Run `npm run example` to get the numbers for your own Node.js version and payload shape before adopting it in a hot path.
 

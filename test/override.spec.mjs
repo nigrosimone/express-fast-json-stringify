@@ -2,34 +2,34 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
-import { fastJsonOpenApi, fastJsonSchema, installFastJson, type OpenApiDocument, type Schema } from './index';
+import { fastJsonOpenApi, fastJsonSchema, installFastJson } from '../src/index.js';
 
 const record = { id: 7, firstName: 'Simoné', lastName: 'Nigrò', secret: 'never serialized' };
 const filtered = { id: 7, firstName: 'Simoné', lastName: 'Nigrò' };
 /** Payload whose bytes differ depending on the `json escape` app setting. */
 const unsafe = { id: 7, firstName: '<script>alert(1)</script>', lastName: 'Nigrò & Co' };
 
-const userSchema: Schema = {
+const userSchema = {
   type: 'object',
   properties: { id: { type: 'integer' }, firstName: { type: 'string' }, lastName: { type: 'string' } },
   additionalProperties: false,
 };
 
-const document: OpenApiDocument = {
+const document = {
   openapi: '3.1.0',
   paths: {
     '/users/{id}': {
       get: {
         responses: {
-          '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
-          '404': { content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } }, additionalProperties: false } } } },
+          200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
+          404: { content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } }, additionalProperties: false } } } },
         },
       },
     },
     '/strict-number': {
       get: {
         responses: {
-          '200': { content: { 'application/json': { schema: { type: 'object', properties: { n: { type: 'integer' } }, required: ['n'], additionalProperties: false } } } },
+          200: { content: { 'application/json': { schema: { type: 'object', properties: { n: { type: 'integer' } }, required: ['n'], additionalProperties: false } } } },
         },
       },
     },
@@ -159,7 +159,7 @@ describe('overrideJson steps aside when it cannot match res.json', () => {
   it.each([
     ['json spaces', 2],
     ['json escape', true],
-    ['json replacer', (_key: string, value: unknown) => value],
+    ['json replacer', (_key, value) => value],
   ])('respects the %s app setting', async (setting, value) => {
     const app = express();
     app.set(setting, value);
@@ -187,14 +187,14 @@ describe('overrideJson steps aside when it cannot match res.json', () => {
   it.each([
     [
       'a single schema',
-      (app: express.Express) => {
+      (app) => {
         installFastJson(app, { overrideJson: true });
         app.get('/users/:id', fastJsonSchema(userSchema), (_req, res) => res.json(unsafe));
       },
     ],
     [
       'an OpenAPI document',
-      (app: express.Express) => {
+      (app) => {
         fastJsonOpenApi(app, document, { overrideJson: true });
         app.get('/users/:id', (_req, res) => res.json(unsafe));
       },
@@ -260,7 +260,7 @@ describe('overrideJson steps aside when it cannot match res.json', () => {
 });
 
 describe('overrideJson with a single schema', () => {
-  const schema: Schema = userSchema;
+  const schema = userSchema;
 
   it('serializes a 2xx response through the schema', async () => {
     const app = express();
@@ -310,7 +310,7 @@ describe('overrideJson with a single schema', () => {
   it('reports a serializer failure and falls back', async () => {
     const onError = vi.fn();
     const app = express();
-    const strict: Schema = { type: 'object', properties: { n: { type: 'integer' } }, required: ['n'], additionalProperties: false };
+    const strict = { type: 'object', properties: { n: { type: 'integer' } }, required: ['n'], additionalProperties: false };
     installFastJson(app, { overrideJson: true, onError });
     app.get('/x', fastJsonSchema(strict), (_req, res) => res.json({ wrong: 'shape' }));
 

@@ -2,32 +2,32 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { fastJsonOpenApi, fastJsonSchema, type OpenApiDocument, openApiSchema, toOpenApiPath } from './index';
+import { fastJsonOpenApi, fastJsonSchema, openApiSchema, toOpenApiPath } from '../src/index.js';
 
 const user = { id: 7, firstName: 'Simoné', lastName: 'Nigrò', secret: 'never serialized' };
 const serializedUser = { id: 7, firstName: 'Simoné', lastName: 'Nigrò' };
 
 /** OpenAPI 3.1, with a $ref into components and a per status schema. */
-const openApi31: OpenApiDocument = {
+const openApi31 = {
   openapi: '3.1.0',
   paths: {
     '/users/{id}': {
       get: {
         responses: {
-          '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
-          '404': { content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+          200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
+          404: { content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
         },
       },
     },
     '/users': {
       get: {
         responses: {
-          '200': { content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/User' } } } } },
+          200: { content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/User' } } } } },
         },
       },
       post: {
         responses: {
-          '201': { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
+          201: { content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } } },
           default: { content: { 'application/json': { schema: { type: 'object', properties: { error: { type: 'string' } } } } } },
         },
       },
@@ -42,21 +42,21 @@ const openApi31: OpenApiDocument = {
     '/tree': {
       get: {
         responses: {
-          '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Node' } } } },
+          200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Node' } } } },
         },
       },
     },
     '/other-media': {
       get: {
         responses: {
-          '200': { content: { 'application/vnd.api+json': { schema: { type: 'object', properties: { wrapped: { type: 'boolean' } } } } } },
+          200: { content: { 'application/vnd.api+json': { schema: { type: 'object', properties: { wrapped: { type: 'boolean' } } } } } },
         },
       },
     },
     '/undocumented-status': {
       get: {
         responses: {
-          '418': { content: { 'application/json': { schema: { type: 'object', properties: { teapot: { type: 'boolean' } } } } } },
+          418: { content: { 'application/json': { schema: { type: 'object', properties: { teapot: { type: 'boolean' } } } } } },
         },
       },
     },
@@ -77,13 +77,13 @@ const openApi31: OpenApiDocument = {
 };
 
 /** OpenAPI 3.0, which spells nullability with `nullable` instead of a type union. */
-const openApi30: OpenApiDocument = {
+const openApi30 = {
   openapi: '3.0.3',
   paths: {
     '/profile': {
       get: {
         responses: {
-          '200': {
+          200: {
             content: {
               'application/json': {
                 schema: {
@@ -100,13 +100,13 @@ const openApi30: OpenApiDocument = {
 };
 
 /** Swagger 2.0, which puts the schema on the response and shares under `definitions`. */
-const swagger20: OpenApiDocument = {
+const swagger20 = {
   swagger: '2.0',
   paths: {
     '/legacy/{id}': {
       get: {
         responses: {
-          '200': { schema: { $ref: '#/definitions/Legacy' } },
+          200: { schema: { $ref: '#/definitions/Legacy' } },
         },
       },
     },
@@ -131,14 +131,14 @@ describe('toOpenApiPath', () => {
 
 describe('openApiSchema', () => {
   it('returns the schema with the shared schemas attached', () => {
-    const schema = openApiSchema(openApi31, '/users/{id}', 'get') as unknown as Record<string, unknown>;
+    const schema = openApiSchema(openApi31, '/users/{id}', 'get');
 
     expect(schema.$ref).toBe('#/components/schemas/User');
     expect(schema.components).toBe(openApi31.components);
   });
 
   it('attaches Swagger 2.0 definitions', () => {
-    const schema = openApiSchema(swagger20, '/legacy/{id}', 'get') as unknown as Record<string, unknown>;
+    const schema = openApiSchema(swagger20, '/legacy/{id}', 'get');
 
     expect(schema.definitions).toBe(swagger20.definitions);
   });
@@ -164,9 +164,9 @@ describe('fastJsonOpenApi', () => {
     ['a number', 42],
     ['a document without paths', { openapi: '3.1.0' }],
   ])('rejects %s as a document', (_label, value) => {
-    expect(() => fastJsonOpenApi(express(), value as never)).toThrow(TypeError);
-    expect(() => fastJsonOpenApi(express(), value as never)).toThrow('express-fast-json-stringify: invalid OpenAPI document');
-    expect(() => openApiSchema(value as never, '/users/{id}', 'get')).toThrow('express-fast-json-stringify: invalid OpenAPI document');
+    expect(() => fastJsonOpenApi(express(), value)).toThrow(TypeError);
+    expect(() => fastJsonOpenApi(express(), value)).toThrow('express-fast-json-stringify: invalid OpenAPI document');
+    expect(() => openApiSchema(value, '/users/{id}', 'get')).toThrow('express-fast-json-stringify: invalid OpenAPI document');
   });
 
   it('serializes with the schema of the matched route', async () => {
@@ -299,7 +299,7 @@ describe('fastJsonOpenApi', () => {
         next(error);
       }
     });
-    app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    app.use((err, _req, res, _next) => {
       res.status(500).json({ error: err.message });
     });
 
@@ -312,7 +312,7 @@ describe('fastJsonOpenApi', () => {
     const app = express();
     fastJsonOpenApi(app, openApi31);
     // The Express route does not match the document, so the operation is named by hand.
-    app.get('/v2/people/:id', fastJsonSchema(openApiSchema(openApi31, '/users/{id}', 'GET')!), (_req, res) => res.fastJson(user));
+    app.get('/v2/people/:id', fastJsonSchema(openApiSchema(openApi31, '/users/{id}', 'GET')), (_req, res) => res.fastJson(user));
 
     const res = await request(app).get('/v2/people/7');
 
@@ -407,7 +407,7 @@ describe('fastJsonOpenApi undocumented responses', () => {
         next(error);
       }
     });
-    app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    app.use((err, _req, res, _next) => {
       res.status(500).json({ error: err.message });
     });
 
@@ -424,7 +424,7 @@ describe('fastJsonOpenApi HTTP semantics', () => {
     fastJsonOpenApi(app, openApi31);
     app.get('/users/:id', (_req, res) => res.fastJson(user));
     app.get('/native/:id', (_req, res) => res.json(serializedUser));
-    app.get('/empty/:code', fastJsonSchema(openApiSchema(openApi31, '/users/{id}', 'get')!), (req, res) => res.status(Number(req.params.code)).fastJson(user));
+    app.get('/empty/:code', fastJsonSchema(openApiSchema(openApi31, '/users/{id}', 'get')), (req, res) => res.status(Number(req.params.code)).fastJson(user));
     return app;
   };
 
