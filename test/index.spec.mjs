@@ -459,3 +459,64 @@ describe('typings', () => {
     expect(middleware.length).toBe(3);
   });
 });
+
+describe('res.fastJson against res.json', () => {
+  // res.fastJson writes with res.end() when res.send() would have nothing to decide, so every
+  // case either side of that line has to answer the bytes res.json() answers
+  const long = { ...accented, firstName: 'é'.repeat(1200) };
+  const cases = [
+    ['a plain GET', {}],
+    ['a body over 1000 bytes', { body: long }],
+    ['the exact type already set', { type: 'application/json; charset=utf-8' }],
+    ['another type set', { type: 'application/vnd.api+json' }],
+    ['status 201', { status: 201 }],
+    ['status 205', { status: 205 }],
+    ['status 500', { status: 500 }],
+    ['an ETag the route set', { etag: '"route"' }],
+    ['If-None-Match', { headers: { 'If-None-Match': 'W/"stale"' } }],
+    ['If-Modified-Since against Last-Modified', { lastModified: true, headers: { 'If-Modified-Since': new Date(Date.now() + 60000).toUTCString() } }],
+    ['If-None-Match with Cache-Control no-cache', { headers: { 'If-None-Match': '*', 'Cache-Control': 'no-cache' } }],
+    ['HEAD', { method: 'head' }],
+    ['POST with If-None-Match', { method: 'post', headers: { 'If-None-Match': '*' } }],
+  ];
+  const settings = [
+    ['the default ETag', () => {}],
+    ['ETag off', (app) => app.set('etag', false)],
+    ['a strong ETag', (app) => app.set('etag', 'strong')],
+    ['an ETag function', (app) => app.set('etag', (body) => `"${body.length}"`)],
+  ];
+  const build = (configure, fast) => {
+    const app = express();
+    installFastJson(app);
+    configure(app);
+    app.all('/:case', fastJsonSchema(schema), (req, res) => {
+      const [, options] = cases[Number(req.params.case)];
+      if (options.type) res.type(options.type);
+      if (options.status) res.status(options.status);
+      if (options.etag) res.set('ETag', options.etag);
+      if (options.lastModified) res.set('Last-Modified', new Date(0).toUTCString());
+      const body = options.body ?? accented;
+      return fast ? res.fastJson(body) : res.json(body);
+    });
+    return app;
+  };
+  const shape = (res) => {
+    const { date: _date, connection: _connection, 'keep-alive': _keepAlive, ...headers } = res.headers;
+    return { status: res.status, headers, text: res.text };
+  };
+
+  it.each(settings)('answers the same bytes with %s', async (_label, configure) => {
+    const fast = build(configure, true);
+    const native = build(configure, false);
+    for (const [index, [label, options]] of cases.entries()) {
+      const method = options.method ?? 'get';
+      const expected = await request(native)
+        [method](`/${index}`)
+        .set(options.headers ?? {});
+      const actual = await request(fast)
+        [method](`/${index}`)
+        .set(options.headers ?? {});
+      expect(shape(actual), label).toEqual(shape(expected));
+    }
+  });
+});
