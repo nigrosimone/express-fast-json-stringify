@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.0.0](https://github.com/nigrosimone/express-fast-json-stringify/compare/v2.0.0...v3.0.0) (2026-11-12)
+
+### ⚠ BREAKING CHANGES
+
+* plain JavaScript with JSDoc and a hand written index.d.ts, no build step; fast-json-stringify ^7.3.5, type and deopt tests
+
+### Performance Improvements
+
+* set the content type with setHeader, res.set adds a mime lookup the value does not need ([35ec281](https://github.com/nigrosimone/express-fast-json-stringify/commit/35ec2810c1e14dbf1f9f85c76ac52c04da551205))
+
+### Code Refactoring
+
+* plain JavaScript with JSDoc and a hand written index.d.ts, no build step; fast-json-stringify ^7.3.5, type and deopt tests ([e14464f](https://github.com/nigrosimone/express-fast-json-stringify/commit/e14464f862e967fb2a184a7a681e9139953b820c))
+
 ## [2.0.0](https://github.com/nigrosimone/express-fast-json-stringify/compare/v1.3.0...v2.0.0) (2026-09-20)
 
 ### ⚠ BREAKING CHANGES
