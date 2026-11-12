@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.1](https://github.com/nigrosimone/express-fast-json-stringify/compare/v3.0.0...v3.0.1) (2026-11-12)
+
+### Performance Improvements
+
+* write with res.end when res.send has nothing to decide, about 3 us less per response on Express ([6c9859f](https://github.com/nigrosimone/express-fast-json-stringify/commit/6c9859fe8c75a3d8624c509b3ff4519a493678f4))
+
 ## [3.0.0](https://github.com/nigrosimone/express-fast-json-stringify/compare/v2.0.0...v3.0.0) (2026-11-12)
 
 ### ⚠ BREAKING CHANGES
