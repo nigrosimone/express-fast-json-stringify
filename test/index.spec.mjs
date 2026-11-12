@@ -169,6 +169,15 @@ describe('installFastJson', () => {
     expect(plain.response.json).toBe(stockJson);
   });
 
+  it('declares to fulmine that the overridden res.json reads nothing of the request, unless onError gets it', () => {
+    const marker = Symbol.for('fulmine.readsNoRequest');
+    const app = express();
+    installFastJson(app, { overrideJson: true });
+    expect(app.response.json[marker]).toBe(true);
+    installFastJson(app, { overrideJson: true, onError: () => {} });
+    expect(app.response.json[marker]).toBeUndefined();
+  });
+
   it('does not leak into another application', async () => {
     const other = express();
     other.get('/', (_req, res, next) => {

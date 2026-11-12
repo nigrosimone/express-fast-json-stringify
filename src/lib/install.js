@@ -37,6 +37,9 @@ const { sendSerialized } = require('./send.js');
  */
 const kSerializer = Symbol('express-fast-json-stringify');
 
+// fulmine's marker for a replaced response method that reads nothing of the request
+const kReadsNoRequest = Symbol.for('fulmine.readsNoRequest');
+
 // one state per response prototype, which is one per app
 /** @type {WeakMap<object, State>} */
 const states = new WeakMap();
@@ -138,7 +141,17 @@ const installFastJson = (app, options = {}) => {
   state.strict = options.strict === true;
   // the stock method is put back when the override is off, so nothing runs on res.json() that
   // was not there before, and a framework reading the prototype sees the method it knows
-  proto.json = state.overrideJson ? jsonMethod(state) : state.stockJson;
+  if (state.overrideJson) {
+    const json = jsonMethod(state);
+    // fulmine skips the request header copy only when no replaced method reads the request. This
+    // one reads method, path and route, and the conditional pair fulmine keeps; onError gets req
+    if (state.onError === undefined) {
+      Object.assign(json, { [kReadsNoRequest]: true });
+    }
+    proto.json = json;
+  } else {
+    proto.json = state.stockJson;
+  }
 };
 
 /**
