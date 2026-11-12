@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.2](https://github.com/nigrosimone/express-fast-json-stringify/compare/v3.0.1...v3.0.2) (2026-11-12)
+
+### Bug Fixes
+
+* the overridden res.json tells fulmine 5.33 it reads no request, so routes keep the header skip ([f11897a](https://github.com/nigrosimone/express-fast-json-stringify/commit/f11897ad02a6cafad13847155a9240d3ae06abc0))
+
 ## [3.0.1](https://github.com/nigrosimone/express-fast-json-stringify/compare/v3.0.0...v3.0.1) (2026-11-12)
 
 ### Performance Improvements

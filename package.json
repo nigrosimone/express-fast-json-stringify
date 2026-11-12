@@ -1,6 +1,6 @@
 {
   "name": "express-fast-json-stringify",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "With express-fast-json-stringify, you can leverage fast-json-stringify in your Express application to improve JSON serialization performance",
   "main": "src/index.js",
   "types": "src/index.d.ts",
