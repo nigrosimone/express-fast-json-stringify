@@ -94,7 +94,7 @@ export declare function installFastJson(app: Application, options?: FastJsonOpti
  * @example
  * ```ts
  * import express from 'express';
- * import { installFastJson, fastJsonSchema, Schema } from 'express-fast-json-stringify';
+ * import { installFastJson, fastJsonSchema, type Schema } from 'express-fast-json-stringify';
  *
  * const app = express();
  * installFastJson(app);

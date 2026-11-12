@@ -25,7 +25,7 @@ It requires Express 4.16 or newer (Express 5 included) and Node.js 20 or newer.
 Define a schema object that specifies the structure of your JSON responses. This schema will be used by `fast-json-stringify` to optimize the serialization process.
 
 ```ts
-import { Schema } from 'express-fast-json-stringify';
+import type { Schema } from 'express-fast-json-stringify';
 
 const schema: Schema = {
   title: 'Example Schema',
@@ -60,7 +60,7 @@ Use the `fastJsonSchema` middleware in your Express routes, passing the schema o
 
 ```ts
 import express from 'express';
-import { fastJsonSchema, installFastJson, Schema } from 'express-fast-json-stringify';
+import { fastJsonSchema, installFastJson, type Schema } from 'express-fast-json-stringify';
 
 const app = express();
 installFastJson(app);
@@ -84,7 +84,7 @@ Instead of using the default `res.json()` method, use the `res.fastJson()` metho
 
 ```ts
 import express from 'express';
-import { fastJsonSchema, installFastJson, Schema } from 'express-fast-json-stringify';
+import { fastJsonSchema, installFastJson, type Schema } from 'express-fast-json-stringify';
 
 const app = express();
 installFastJson(app);
@@ -179,13 +179,13 @@ The document is a plain object, so this works with whatever produces yours:
 
 | Tool                        | How to pass it                                                         |
 | --------------------------- | ---------------------------------------------------------------------- |
-| `swagger-jsdoc`             | `fastJsonOpenApi(swaggerJsdoc(options))`                               |
+| `swagger-jsdoc`             | `fastJsonOpenApi(app, swaggerJsdoc(options))`                          |
 | `swagger-ui-express`        | the same object you hand to `swaggerUi.setup(document)`                |
 | `express-openapi-validator` | the same document you pass as `apiSpec` (or the parsed YAML/JSON file) |
 | `tsoa`                      | the generated `swagger.json`                                           |
 | hand written                | `import document from './openapi.json' with { type: 'json' }`          |
 
-There is no dependency on any of them: the middleware only reads `paths`,
+There is no dependency on any of them: it only reads `paths`,
 `components.schemas` (OpenAPI 3.x) and `definitions` (Swagger 2.0).
 
 ### What it resolves
