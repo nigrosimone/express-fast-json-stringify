@@ -48,17 +48,11 @@ jobs:
 
   test:
     name: Test (node ${{ matrix.node-version }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
         node-version: ['20.x', '22.x', '24.x']
-        include:
-          - os: windows-latest
-            node-version: '22.x'
-          - os: macos-latest
-            node-version: '22.x'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -69,7 +63,7 @@ jobs:
       - run: npm run cov:check
       - run: npm run test:perf
       - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '22.x'
+        if: matrix.node-version == '22.x'
         uses: codecov/codecov-action@v7
         continue-on-error: true
         with:
